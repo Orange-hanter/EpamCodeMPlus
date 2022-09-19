@@ -15,8 +15,8 @@ using std::ios;
 
 class IWorker {
  public:
-  virtual int transfering() = 0;
-
+  virtual int transferring() = 0;
+  virtual bool isDone() = 0;
   virtual ~IWorker(){};
 
  protected:
@@ -29,18 +29,21 @@ class IWorker {
 class ByteStreamWorker : public IWorker {
  public:
   ByteStreamWorker() = delete;
+
   explicit ByteStreamWorker(std::string src, std::string dst)
       : _src(std::make_unique<std::ifstream>(src, ios::binary)),
         _dst(std::make_unique<std::ofstream>(dst, ios::binary))
   {
   }
 
-  int transfering() override
+  int transferring() override
   {
     startProcedureOfWriting();
     readDataToBuf();
     return 0;
   }
+
+  bool isDone() override { return _done; }
 
   inline void startProcedureOfWriting()
   {
@@ -52,6 +55,8 @@ class ByteStreamWorker : public IWorker {
         _packages.pop_front();
         (*_dst).write(pkg.data(), pkg.frameSize());
       }
+
+      _done = true;
     };
     writer = std::thread(copyingAlgorithm);
   }
@@ -72,6 +77,7 @@ class ByteStreamWorker : public IWorker {
  private:
   std::unique_ptr<std::ofstream> _dst;
   std::unique_ptr<std::ifstream> _src;
+  bool _done = false;
 };
 }  // namespace Workers
 }  // namespace Clone
