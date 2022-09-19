@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 
-#include "Direcror.hpp"
+#include "Director.hpp"
 #include "Strurtup.hpp"
 
 int main(int argc, char** argv)

@@ -1,5 +1,5 @@
 #pragma once
-#include "Direcror.hpp"
+#include "Director.hpp"
 
 #include <memory>
 #include <typeinfo>
@@ -16,5 +16,11 @@ Director::Director(std::string src, std::string dst, CopyingMode mode)
 
 Director::~Director() {}
 
-void Director::work() { _registeredWorkers[_mode]->transfering(); }
+void Director::work()
+{
+  _registeredWorkers[_mode]->transferring();
+  while (!_registeredWorkers[_mode]->isDone()) {
+    ;
+  }
+}
 }  // namespace Clone
