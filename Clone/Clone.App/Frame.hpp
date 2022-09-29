@@ -4,15 +4,17 @@
 
 namespace Clone {
 
+template <typename T = char>
 struct Frame {
   Frame(size_t frameSize = 32) : _frameSize(frameSize)
   {
-    _buf = new char[frameSize]{'\0'};
+    _buf = new T[frameSize]{'\0'};
   }
 
   Frame(Frame&& other)
   {
-    if (this != &other) _buf = other._buf;
+    if (this == &other) return;
+    _buf = other._buf;
     other._buf = nullptr;
     _frameSize = other._frameSize;
   }
@@ -20,6 +22,7 @@ struct Frame {
   Frame(const Frame& other)
   {
     _frameSize = other._frameSize;
+    _buf = new T[_frameSize];
     memcpy(_buf, other._buf, _frameSize);
   }
 
@@ -30,15 +33,19 @@ struct Frame {
 
   Frame& operator=(Frame&& other)
   {
-    _buf = other._buf;
-    other._buf = nullptr;
-    _frameSize = other._frameSize;
+    // should I check here nuppltr?
+    if (this != &other) {
+      _buf = other._buf;
+      other._buf = nullptr;
+      _frameSize = other._frameSize;
+    }
     return *this;
   }
 
   Frame& operator=(const Frame& other)
   {
     _frameSize = other._frameSize;
+    _buf = new T[_frameSize];
     memcpy(_buf, other._buf, _frameSize);
     return *this;
   }
@@ -50,12 +57,12 @@ struct Frame {
     return ifs;
   }
 
-  char* data() const { return _buf; }
+  T* data() const { return _buf; }
 
   size_t frameSize() const { return _frameSize; };
 
  private:
   size_t _frameSize;
-  char* _buf;
+  T* _buf;
 };
 }  // namespace Clone
