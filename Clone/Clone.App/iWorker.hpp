@@ -1,16 +1,15 @@
 #pragma
-#include <condition_variable>
-#include <deque>
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <mutex>
 #include <thread>
 
-#include "Package.hpp"
+#include "Frame.hpp"
+#include "SafeDeque.hpp"
 
 namespace Clone {
 namespace Workers {
+using namespace std::literals::chrono_literals;
 using std::ios;
 
 class IWorker {
@@ -23,7 +22,7 @@ class IWorker {
   std::mutex m;
   std::condition_variable cv;
   std::thread writer;
-  std::deque<Frame> _packages;
+  ThreadSafeDeque<Frame<>> _packages;
 };
 
 class ByteStreamWorker : public IWorker {
@@ -49,13 +48,13 @@ class ByteStreamWorker : public IWorker {
   {
     auto copyingAlgorithm = [this]() {
       while (!_src->eof() || !_packages.empty()) {
-        std::unique_lock<std::mutex> ulm(m);
-        if (_packages.empty()) cv.wait(ulm);
-        auto pkg = std::move(_packages.front());
-        _packages.pop_front();
+        Frame pkg;
+        _packages.pop_front_waiting(pkg);
         (*_dst).write(pkg.data(), pkg.frameSize());
       }
 
+      _src->close();
+      _dst->close();
       _done = true;
     };
     writer = std::thread(copyingAlgorithm);
