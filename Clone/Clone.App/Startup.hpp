@@ -3,9 +3,9 @@
 #include <memory>
 
 namespace Clone {
-class StrurtupConfiguration {
+class StartupConfiguration {
  public:
-  StrurtupConfiguration(int argc, char** argv)
+  StartupConfiguration(int argc, char** argv)
   {
     _parser = std::make_unique<argparse::ArgumentParser>("Copy");
     _parser->add_description(

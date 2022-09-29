@@ -4,11 +4,11 @@
 #include <string>
 
 #include "Director.hpp"
-#include "Strurtup.hpp"
+#include "Startup.hpp"
 
 int main(int argc, char** argv)
 {
-  auto conf = Clone::StrurtupConfiguration(argc, argv);
+  auto conf = Clone::StartupConfiguration(argc, argv);
 
   Clone::Director director(conf.getParam("--source"),
                            conf.getParam("--destination"));

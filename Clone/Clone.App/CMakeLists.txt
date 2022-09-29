@@ -2,15 +2,19 @@ project(Clone.App LANGUAGES CXX)
 set(TARGET ${PROJECT_NAME})
 set(OUTPUT_NAME ${PROJECT_NAME})
 
-set(SOURCE_FILES
-
+set(HEADER_FILES_APP
     Strurtup.hpp
+)
+
+set(SOURCE_FILES
     main.cpp
 )
 
 set(LIB_SOURCE_FILES
-    Director.hpp
     Director.cpp
+)
+set(LIB_HEADER_FILES
+    Director.hpp
     iWorker.hpp
     Package.hpp
 )

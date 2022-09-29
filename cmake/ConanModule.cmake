@@ -15,7 +15,7 @@ include(${CMAKE_BINARY_DIR}/conan.cmake)
 
 # Uses conan.cmake functionality to list the needed packages.
 conan_cmake_configure(REQUIRES
-  argparse/2.6
+  argparse/2.9
   catch2/3.1.0
   GENERATORS cmake_find_package_multi)
 
