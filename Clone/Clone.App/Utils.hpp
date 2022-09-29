@@ -4,7 +4,7 @@
 namespace Clone {
 
 enum class CopyingMode {
-  Bytestream,
+  BitStream,
   others
 };
 }  // namespace Clone

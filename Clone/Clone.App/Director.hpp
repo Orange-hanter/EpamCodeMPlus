@@ -15,20 +15,22 @@ namespace Clone {
 @brief Class that produce work
 */
 class Director {
-  using spIworker = std::shared_ptr<Workers::IWorker>;
+  using spIWorker = std::shared_ptr<Workers::IWorker>;
 
  public:
   Director(std::string source, std::string target,
-           CopyingMode mode = CopyingMode::Bytestream);
+           CopyingMode mode = CopyingMode::BitStream);
 
   Director(std::filesystem::path source, std::filesystem::path target,
-           CopyingMode mode = CopyingMode::Bytestream);
+           CopyingMode mode = CopyingMode::BitStream);
   ~Director();
 
   void work();
 
+  bool processStatus();
+
  private:
   CopyingMode _mode;
-  std::map<CopyingMode, spIworker> _registeredWorkers;
+  std::map<CopyingMode, spIWorker> _registeredWorkers;
 };
 }  // namespace Clone
