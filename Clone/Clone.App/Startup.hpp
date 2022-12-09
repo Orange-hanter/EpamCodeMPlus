@@ -8,6 +8,7 @@ class StartupConfiguration {
   StartupConfiguration(int argc, char** argv)
   {
     _parser = std::make_unique<argparse::ArgumentParser>("Copy");
+
     _parser->add_description(
         "Copy tool app implement simple 2 threaded \"copy\" tool."
         "Tool should be implemented as a console application."
@@ -18,15 +19,32 @@ class StartupConfiguration {
 
     _parser->add_argument("-s", "--source")
         .required()
+        .default_value(std::string("-"))
         .help("Absolute path to original file.");
 
     _parser->add_argument("-o", "--destination")
         .required()
+        .default_value(std::string("-"))
         .help("Absolute path to the new file.");
 
     _parser->add_argument("-f", "--frame")
         .help("Max size of one package.")
         .default_value<uint16_t>(32);
+
+    _parser->add_argument("--ipc")
+        .help("Turn on interprocess communication mode.")
+        .default_value(false)
+        .implicit_value(true);
+
+    _parser->add_argument("--role_host")
+        .help("Work only with --ipc mode. Take role of host, and fill shared memory by data")
+        .default_value(true)
+        .implicit_value(false);
+
+    _parser->add_argument("--role_client")
+        .help("Work only with --ipc mode. Take role of client, read data from shared memory")
+        .default_value(true)
+        .implicit_value(false);
 
     try {
       _parser->parse_args(argc, argv);
@@ -45,6 +63,15 @@ class StartupConfiguration {
     }
     throw std::exception("Such argument didn't founded");
     return {};
+  }
+
+  bool isFlag(std::string flag)
+  {
+    if (auto arg = _parser->present(flag)) {
+      return _parser->get<bool>(flag);
+    }
+    throw std::exception("Such argument didn't founded");
+    return false;
   }
 
  private:

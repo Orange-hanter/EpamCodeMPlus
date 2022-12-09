@@ -6,7 +6,8 @@ namespace Clone {
 
 template <typename T = char>
 struct Frame {
-  Frame(size_t frameSize = 32) : _frameSize(frameSize)
+
+  Frame(size_t frameSize = defaultFrameSize) : _frameSize(frameSize)
   {
     _buf = new T[frameSize]{'\0'};
   }
@@ -64,5 +65,7 @@ struct Frame {
  private:
   size_t _frameSize;
   T* _buf;
+
+  static const size_t defaultFrameSize = 32;
 };
 }  // namespace Clone

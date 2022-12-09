@@ -17,7 +17,7 @@ set_target_properties(Clone.Test PROPERTIES FOLDER ${FOLDER})
 target_link_libraries(Clone.Test PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(Clone.Benchmark PUBLIC Copy.Core)
 
-include(CTest)
-include(Catch)
+#include(CTest)
+#include(Catch)
 
 # add_test(NAME ${OUTPUT_NAME} COMMAND Clone.Test)

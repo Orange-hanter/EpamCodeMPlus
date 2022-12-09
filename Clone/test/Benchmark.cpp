@@ -4,7 +4,7 @@
 #include <numeric>
 #include <vector>
 
-#include "../Clone.App/Director.hpp"
+#include "WorkerFactory.hpp"
 
 using namespace std::chrono;
 using std::filesystem::path;
@@ -14,14 +14,7 @@ static const uint32_t MByte_s = KByte_s * 1024;
 static const uint32_t testingMemoryBlockCount = 100;
 static const uint32_t testingMemoryBlockSize = MByte_s;
 
-void generateFile(path sourceFile)
-{
-  static char mem[testingMemoryBlockSize];
-  std::fill_n(mem, testingMemoryBlockSize, 0x55);
-  std::ofstream file(sourceFile);
-  for (size_t i = 0; i < testingMemoryBlockCount; i++) file << mem;
-  file.close();
-}
+void generateFile(path sourceFile);
 
 int main(int argc, char** arv)
 {
@@ -35,9 +28,13 @@ int main(int argc, char** arv)
   for (int i = 0; i < 10; i++) {
     auto start = steady_clock::now();
     {
-      Clone::Director director(absolute(sourceFile).string(),
-                               absolute(destinationFile).string());
-      director.work();
+      auto worker =
+          Clone::WorkerFactory(absolute(sourceFile).string(),
+                               absolute(destinationFile).string())
+              .getWorker(Clone::WorkerFactory::CopyingMode::BitStream);
+
+      worker->execute();
+      
     }
     auto end = steady_clock::now();
     time.push_back(duration_cast<milliseconds>(end - start).count());
@@ -49,4 +46,13 @@ int main(int argc, char** arv)
             << std::accumulate(time.begin(), time.end(), 0) / time.size()
             << "ms";
   return 0;
+}
+
+void generateFile(path sourceFile)
+{
+  static char mem[testingMemoryBlockSize];
+  std::fill_n(mem, testingMemoryBlockSize, 0x55);
+  std::ofstream file(sourceFile);
+  for (size_t i = 0; i < testingMemoryBlockCount; i++) file << mem;
+  file.close();
 }

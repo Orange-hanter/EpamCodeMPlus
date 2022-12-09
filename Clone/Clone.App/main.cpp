@@ -3,15 +3,28 @@
 #include <iostream>
 #include <string>
 
-#include "Director.hpp"
 #include "Startup.hpp"
+#include "WorkerFactory.hpp"
+
+using Clone::WorkerFactory;
 
 int main(int argc, char** argv)
 {
   auto conf = Clone::StartupConfiguration(argc, argv);
 
-  Clone::Director director(conf.getParam("--source"),
-                           conf.getParam("--destination"));
-  director.work();
+  auto mode = conf.isFlag("--ipc")
+                  ? WorkerFactory::CopyingMode::SharedMemoryStream
+                  : WorkerFactory::CopyingMode::BitStream;
+
+  auto worker = Clone::WorkerFactory(conf.getParam("--source"),
+                                     conf.getParam("--destination"))
+                    .getWorker(mode);
+
+  worker->execute();
+
+  while (!worker->isDone()) {
+    /* wait until end */
+  }
+
   return 0;
 }
