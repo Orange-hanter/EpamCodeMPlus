@@ -7,21 +7,25 @@ set(HEADER_FILES_APP
 )
 
 set(SOURCE_FILES
-    main.cpp
+    ./main.cpp
+    ./Startup.hpp
 )
 
 set(LIB_SOURCE_FILES
-    Director.cpp
+    WorkerFactory.cpp
 )
+
 set(LIB_HEADER_FILES
-    Director.hpp
-    iWorker.hpp
-    Package.hpp
+    ./WorkerFactory.hpp
+    ./Frame.hpp
+    ./Workers/iWorker.hpp
+    ./Workers/ByteStreamWorker.hpp
 )
 
 add_executable(${TARGET} ${SOURCE_FILES})
 
-add_library(Copy.Core STATIC ${LIB_SOURCE_FILES})
+add_library(Copy.Core STATIC ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES})
+target_include_directories(Copy.Core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/)
 
 set_target_properties(${TARGET} PROPERTIES FOLDER ${FOLDER})
 
