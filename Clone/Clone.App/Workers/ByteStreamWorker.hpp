@@ -1,29 +1,7 @@
-#pragma
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <thread>
-
-#include "Frame.hpp"
-#include "SafeDeque.hpp"
+#include "iWorker.hpp"
 
 namespace Clone {
 namespace Workers {
-using namespace std::literals::chrono_literals;
-using std::ios;
-
-class IWorker {
- public:
-  virtual int transferring() = 0;
-  virtual bool isDone() = 0;
-  virtual ~IWorker(){};
-
- protected:
-  std::mutex m;
-  std::condition_variable cv;
-  std::thread writer;
-  ThreadSafeDeque<Frame<>> _packages;
-};
 
 class ByteStreamWorker : public IWorker {
  public:
@@ -35,7 +13,7 @@ class ByteStreamWorker : public IWorker {
   {
   }
 
-  int transferring() override
+  int execute() override
   {
     startProcedureOfWriting();
     readDataToBuf();
