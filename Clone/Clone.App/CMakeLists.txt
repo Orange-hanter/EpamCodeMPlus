@@ -23,6 +23,8 @@ set(LIB_HEADER_FILES
 )
 
 add_executable(${TARGET} ${SOURCE_FILES})
+add_executable(Test1 ShM1.cpp)
+add_executable(Test2 ShM2.cpp)
 
 add_library(Copy.Core STATIC ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES})
 target_include_directories(Copy.Core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/)
