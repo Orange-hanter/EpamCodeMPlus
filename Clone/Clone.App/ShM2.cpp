@@ -18,7 +18,7 @@ TCHAR szMsg[] = TEXT("LOOOOOL.");
 int _tmain()
 {
  
-  auto pBuf = Clone::InplaceFrame();
+  auto pBuf = Clone::Frame();
 
   bool loop = true;
   while (loop) {

@@ -1,15 +1,13 @@
 #include "iWorker.hpp"
 
-namespace Clone {
-namespace Workers {
-
-class ByteStreamWorker : public IWorker {
+namespace Clone::Workers {
+class ByteStreamWorker final : public IWorker {
  public:
   ByteStreamWorker() = delete;
 
   explicit ByteStreamWorker(std::string src, std::string dst)
-      : _src(std::make_unique<std::ifstream>(src, ios::binary)),
-        _dst(std::make_unique<std::ofstream>(dst, ios::binary))
+      : _dst(std::make_unique<std::ofstream>(dst, ios::binary)),
+        _src(std::make_unique<std::ifstream>(src, ios::binary))
   {
   }
 
@@ -22,9 +20,10 @@ class ByteStreamWorker : public IWorker {
 
   bool isDone() override { return _done; }
 
+ private:
   inline void startProcedureOfWriting()
   {
-    auto copyingAlgorithm = [this]() {
+    writer = std::jthread([this]() {
       while (!_src->eof() || !_packages.empty()) {
         Frame pkg;
         _packages.pop_front_waiting(pkg);
@@ -34,13 +33,12 @@ class ByteStreamWorker : public IWorker {
       _src->close();
       _dst->close();
       _done = true;
-    };
-    writer = std::thread(copyingAlgorithm);
+    });
   }
 
   inline void readDataToBuf()
   {
-    for (; !_src->eof();) {
+    while (!_src->eof()) {
       Frame frame;
       (*_src) >> frame;
       _packages.push_back(std::move(frame));
@@ -49,12 +47,13 @@ class ByteStreamWorker : public IWorker {
     cv.notify_one();
   }
 
-  ~ByteStreamWorker() { writer.join(); }
-
  private:
+  bool _done = false;
+  std::mutex m;
+  std::condition_variable cv;
+  std::jthread writer;
   std::unique_ptr<std::ofstream> _dst;
   std::unique_ptr<std::ifstream> _src;
-  bool _done = false;
+  ThreadSafeDeque<Frame<>> _packages;
 };
-}  // namespace Workers
-}  // namespace Clone
+}  // namespace Clone::Workers

@@ -4,7 +4,7 @@
 #include <string>
 
 #include "Startup.hpp"
-#include "WorkerFactory.hpp"
+#include "Workers/WorkerFactory.hpp"
 
 using Clone::WorkerFactory;
 
@@ -18,7 +18,7 @@ int main(int argc, char** argv)
 
   auto worker = Clone::WorkerFactory(conf.getParam("--source"),
                                      conf.getParam("--destination"))
-                    .getWorker(mode);
+                    .getWorker(mode, conf.isFlag("--role_host"));
 
   worker->execute();
 

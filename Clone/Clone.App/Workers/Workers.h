@@ -1,4 +1,5 @@
 #pragma once
 
-#include "ByteStreamWorker.hpp"
 #include "iWorker.hpp"
+#include "ByteStreamWorker.hpp"
+#include "IPCWorker.hpp"

@@ -19,12 +19,11 @@ class StartupConfiguration {
 
     _parser->add_argument("-s", "--source")
         .required()
-        .default_value(std::string("-"))
+        .default_value<std::string>("-")
         .help("Absolute path to original file.");
 
     _parser->add_argument("-o", "--destination")
-        .required()
-        .default_value(std::string("-"))
+        .default_value<std::string>("-")
         .help("Absolute path to the new file.");
 
     _parser->add_argument("-f", "--frame")
@@ -37,14 +36,18 @@ class StartupConfiguration {
         .implicit_value(true);
 
     _parser->add_argument("--role_host")
-        .help("Work only with --ipc mode. Take role of host, and fill shared memory by data")
+        .help(
+            "Work only with --ipc mode. Take role of host, and fill shared "
+            "memory by data")
         .default_value(true)
-        .implicit_value(false);
+        .implicit_value(true);
 
     _parser->add_argument("--role_client")
-        .help("Work only with --ipc mode. Take role of client, read data from shared memory")
-        .default_value(true)
-        .implicit_value(false);
+        .help(
+            "Work only with --ipc mode. Take role of client, read data from "
+            "shared memory")
+        .default_value(false)
+        .implicit_value(true);
 
     try {
       _parser->parse_args(argc, argv);
@@ -56,23 +59,12 @@ class StartupConfiguration {
     }
   }
 
-  std::string getParam(std::string parameter)
+  std::string getParam(std::string_view parameter) const
   {
-    if (auto arg = _parser->present(parameter)) {
-      return arg.value();
-    }
-    throw std::exception("Such argument didn't founded");
-    return {};
+      return _parser->get(parameter);
   }
 
-  bool isFlag(std::string flag)
-  {
-    if (auto arg = _parser->present(flag)) {
-      return _parser->get<bool>(flag);
-    }
-    throw std::exception("Such argument didn't founded");
-    return false;
-  }
+  bool isFlag(std::string_view flag) const { return _parser->is_used(flag); }
 
  private:
   std::unique_ptr<argparse::ArgumentParser> _parser;

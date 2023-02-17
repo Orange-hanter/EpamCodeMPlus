@@ -3,7 +3,7 @@ set(TARGET ${PROJECT_NAME})
 set(OUTPUT_NAME ${PROJECT_NAME})
 
 set(HEADER_FILES_APP
-    Strurtup.hpp
+    ./Strurtup.hpp
 )
 
 set(SOURCE_FILES
@@ -12,14 +12,15 @@ set(SOURCE_FILES
 )
 
 set(LIB_SOURCE_FILES
-    WorkerFactory.cpp
+    ./Workers/WorkerFactory.cpp
 )
 
 set(LIB_HEADER_FILES
-    ./WorkerFactory.hpp
+    ./Workers/WorkerFactory.hpp
     ./Frame.hpp
     ./Workers/iWorker.hpp
     ./Workers/ByteStreamWorker.hpp
+    ./Workers/IPCWorker.hpp
 )
 
 add_executable(${TARGET} ${SOURCE_FILES})

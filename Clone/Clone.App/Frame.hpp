@@ -2,12 +2,16 @@
 
 #include <windows.h>
 
+#include <array>
 #include <cstring>
+#include <iostream>
 #include <istream>
 #include <memory>
 #include <sstream>
 
 namespace Clone {
+
+using byte = char;
 
 template <typename T = char>
 struct Frame {
@@ -80,74 +84,124 @@ struct Frame {
   static const size_t defaultFrameSize = 32;
 };
 
-struct InplaceFrame {
-  using T = char;
+namespace IPC {
+
+struct Frame {
+  enum class STATE {
+    START,
+    INITIALISED,
+    READY_TO_WORK,
+    READY_TO_READ,
+    READY_TO_WRITE,
+    END_SOURCE,
+    DONE
+  };
+
+  struct DataBulk {
+    STATE _state{STATE::START};
+    size_t _sizeOfData{0};
+    byte _data_bulk[64];
+  };
+
+  using T = DataBulk;
   using TRef = T*;
 
-  InplaceFrame(size_t frameSize = defaultFrameSize) : _frameSize(frameSize)
+  Frame()
   {
-    hMapFile =
-        CreateFileMapping(INVALID_HANDLE_VALUE,  // use paging file
-                          NULL,                  // default security
-                          PAGE_READWRITE,        // read/write access
-                          0,           // maximum object size (high-order DWORD)
-                          _frameSize,  // maximum object size (low-order DWORD)
-                          TEXT(szName));  // name of mapping object
-    if (hMapFile == NULL) {
-      ;  // do some mechanism with errors
+    hMapFile = CreateFileMapping(
+        INVALID_HANDLE_VALUE,  // use paging file
+        nullptr,               // default security
+        PAGE_READWRITE,        // read/write access
+        0,                     // maximum object size (high-order DWORD)
+        defaultFrameSize,      // maximum object size (low-order DWORD)
+        TEXT(szName));         // name of mapping object
+
+    if (hMapFile == nullptr) {
+      exit(2);  // TODO do some mechanism with errors
     }
+
     _buf = (TRef)MapViewOfFile(hMapFile,             // handle to map object
                                FILE_MAP_ALL_ACCESS,  // read/write permission
-                               0, 0, _frameSize);
+                               0, 0, defaultFrameSize);
 
-    if (_buf == NULL) {
+    if (_buf == nullptr) {
       auto err =
           GetLastError();  // the same, need to save error and check after
-      CloseHandle(hMapFile);
+      if (!err) {
+        CloseHandle(hMapFile);
+      }
+      exit(3);
     }
+
+    if(_buf->_state == STATE::START) 
+    {
+      new (_buf) T();
+      _buf->_state = STATE::INITIALISED;
+    }
+    else if(_buf->_state == STATE::INITIALISED)
+    {
+      _buf->_state = STATE::READY_TO_WORK;
+    }
+    else
+    {
+      exit(4);
+    }
+
   }
 
-  ~InplaceFrame()
+  ~Frame()
   {
     UnmapViewOfFile(_buf);
     CloseHandle(hMapFile);
   }
 
-  T* data() { return _buf; }
+  TRef data() const { return _buf; }
 
-  friend std::basic_istream<T>& operator>>(std::basic_istream<T>& ifs,
-                                           InplaceFrame& frame)
+  bool isState(STATE state) const { return _buf->_state == state; }
+
+  void setState(STATE state) { _buf->_state = state; }
+
+  friend std::basic_istream<byte>& operator>>(std::basic_istream<byte>& ifs,
+                                              Frame& frame)
   {
-    ifs.read(frame._buf, frame._frameSize);
-    frame._frameSize = static_cast<size_t>(ifs.gcount());
+    ifs.read(frame._buf->_data_bulk, 64 - frame._buf->_sizeOfData);
+    frame._buf->_sizeOfData = static_cast<size_t>(ifs.gcount());
     return ifs;
   }
 
-  friend std::basic_istream<T>& operator>>(std::basic_istream<T>& ifs,
-                                           InplaceFrame* frame)
+  friend std::basic_istream<byte>& operator>>(std::basic_istream<byte>& ifs,
+                                              Frame* frame)
   {
-    ifs.read(frame->_buf, frame->_frameSize);
-    frame->_frameSize = static_cast<size_t>(ifs.gcount());
+    ifs.read(frame->_buf->_data_bulk, 64 - frame->_buf->_sizeOfData);
+    frame->_buf->_sizeOfData = static_cast<size_t>(ifs.gcount());
     return ifs;
   }
 
-  friend std::basic_ostream<char>& operator<<(std::basic_ostream<T>& ofs,
-                                              InplaceFrame* frame)
+  friend std::basic_ostream<byte>& operator<<(std::basic_ostream<byte>& ofs,
+                                              const Frame* frame)
   {
-    ofs.write(frame->_buf, frame->_frameSize);
+    ofs.write(frame->_buf->_data_bulk, frame->_buf->_sizeOfData);
+    return ofs;
+  }
+
+  friend std::basic_ostream<byte>& operator<<(std::basic_ostream<byte>& ofs,
+                                              const Frame& frame)
+  {
+    ofs.write(frame._buf->_data_bulk, frame._buf->_sizeOfData);
     return ofs;
   }
 
  private:
+  Frame(const Frame*) = delete;
+  Frame& operator=(const Frame*) = delete;
+  Frame(const Frame&&) = delete;
+  Frame& operator=(const Frame&&) = delete;
+
   static inline const char szName[] = {"Global\\MyFileMappingObject"};
-  static const size_t defaultFrameSize = 32;
+  static const size_t defaultFrameSize = sizeof(DataBulk);
   HANDLE hMapFile;
   TRef _buf;
-  size_t _frameSize;
-
-struct DataBulk {
-    T data_bulk[InplaceFrame::_frameSize];
-    size_t size_of_data;
-  };
 };
+}  // namespace IPC
+
 }  // namespace Clone
