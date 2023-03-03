@@ -1,11 +1,13 @@
 #include "WorkerFactory.hpp"
+#include "Utils.hpp"
 
 #include <memory>
 #include <typeinfo>
 
-#include "Utils.hpp"
 
 namespace Clone {
+
+namespace fs = std::filesystem;
 
 using Workers::ByteStreamWorker;
 using Workers::IPCWorker;
@@ -20,7 +22,7 @@ WorkerFactory::spIWorker WorkerFactory::getWorker(std::string source,
                                                   std::string target,
                                                   CopyingMode mode) const
 {
-  target = ManipulateWithName(source, target);
+  target = Utils::ManipulateWithName(source, target);
 
   spIWorker workerObj;
   switch (mode) {

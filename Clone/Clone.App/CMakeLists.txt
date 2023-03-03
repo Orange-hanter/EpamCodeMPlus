@@ -21,6 +21,7 @@ set(LIB_HEADER_FILES
     ./Workers/iWorker.hpp
     ./Workers/ByteStreamWorker.hpp
     ./Workers/IPCWorker.hpp
+    ./Utils.hpp
 )
 
 add_executable(${TARGET} ${SOURCE_FILES})

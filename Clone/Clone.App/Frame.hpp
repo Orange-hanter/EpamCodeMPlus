@@ -7,14 +7,15 @@
 #include <iostream>
 #include <istream>
 #include <memory>
+#include <mutex>
 #include <sstream>
-
 namespace Clone {
 
 using byte = char;
 
 template <typename T = char>
-struct Frame {
+class Frame {
+ public:
   Frame(size_t frameSize = defaultFrameSize) : _frameSize(frameSize)
   {
     _buf = new T[frameSize]{'\0'};
@@ -28,11 +29,10 @@ struct Frame {
     _frameSize = other._frameSize;
   }
 
-  Frame(const Frame& other)
+  Frame(const Frame& other) : _frameSize(other._frameSize)
   {
-    _frameSize = other._frameSize;
-    _buf = new T[_frameSize];
-    memcpy(_buf, other._buf, _frameSize);
+    _buf = new T[other._frameSize];
+    memcpy(_buf, other._buf, other._frameSize);
   }
 
   ~Frame()
@@ -40,9 +40,9 @@ struct Frame {
     if (_buf != nullptr) delete[] _buf;
   }
 
-  Frame& operator=(Frame&& other)
+  Frame& operator=(Frame&& other) noexcept
   {
-    // should I check here nuppltr?
+    // should I check here nullptr?
     if (this != &other) {
       _buf = other._buf;
       other._buf = nullptr;
@@ -86,7 +86,8 @@ struct Frame {
 
 namespace IPC {
 
-struct Frame {
+class Frame {
+ public:
   enum class STATE {
     START,
     INITIALISED,
@@ -132,21 +133,16 @@ struct Frame {
       }
       exit(3);
     }
-
-    if(_buf->_state == STATE::START) 
-    {
+    if (isState(STATE::START)) {
       new (_buf) T();
-      _buf->_state = STATE::INITIALISED;
+      setState(STATE::INITIALISED);
     }
-    else if(_buf->_state == STATE::INITIALISED)
-    {
-      _buf->_state = STATE::READY_TO_WORK;
+    else if (isState(STATE::INITIALISED)) {
+      setState(STATE::READY_TO_WORK);
     }
-    else
-    {
+    else {
       exit(4);
     }
-
   }
 
   ~Frame()
@@ -157,9 +153,28 @@ struct Frame {
 
   TRef data() const { return _buf; }
 
-  bool isState(STATE state) const { return _buf->_state == state; }
+  bool isState(STATE state)
+  {
+    std::lock_guard<std::mutex> lock(_m);
+    return _buf->_state == state;
+  }
 
-  void setState(STATE state) { _buf->_state = state; }
+  void setState(STATE state)
+  {
+    std::lock_guard<std::mutex> lock(_m);
+    //std::cout << "\nState " << static_cast<int>(_buf->_state) << " to "
+    //          << static_cast<int>(state) << '\n';
+    _buf->_state = state;
+  }
+
+  void logDataBulk() const
+  {
+#ifdef DEBUG
+    std::cout << "Size of block " << _buf->_sizeOfData << "\nState "
+              << static_cast<int>(_buf->_state) << "\nBulk data\n"
+              << _buf->_data_bulk;
+#endif
+  }
 
   friend std::basic_istream<byte>& operator>>(std::basic_istream<byte>& ifs,
                                               Frame& frame)
@@ -191,15 +206,17 @@ struct Frame {
     return ofs;
   }
 
- private:
   Frame(const Frame*) = delete;
+  Frame(Frame*) = delete;
   Frame& operator=(const Frame*) = delete;
   Frame(const Frame&&) = delete;
   Frame& operator=(const Frame&&) = delete;
 
+ private:
   static inline const char szName[] = {"Global\\MyFileMappingObject"};
   static const size_t defaultFrameSize = sizeof(DataBulk);
-  HANDLE hMapFile;
+  [[maybe_unused]] HANDLE hMapFile;
+  std::mutex _m;
   TRef _buf;
 };
 }  // namespace IPC

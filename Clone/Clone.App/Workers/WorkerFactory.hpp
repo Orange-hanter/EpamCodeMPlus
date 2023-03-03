@@ -1,9 +1,5 @@
 #pragma once
 
-#include <memory.h>
-
-#include <filesystem>
-#include <map>
 #include <memory>
 #include <string>
 
@@ -11,6 +7,7 @@
 
 
 namespace Clone {
+
 
 /*
 @brief Class that produce work
@@ -43,6 +40,5 @@ class WorkerFactory {
   Workers::ROLE _role;
   std::string _source;
   std::string _target;
-  // std::map<CopyingMode, spIWorker> _registeredWorkers; // delete
 };
 }  // namespace Clone
