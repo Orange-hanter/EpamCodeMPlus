@@ -7,7 +7,6 @@
 #include "Frame.hpp"
 #include "SafeDeque.hpp"
 
-
 namespace Clone::Workers {
 
 using std::ios;

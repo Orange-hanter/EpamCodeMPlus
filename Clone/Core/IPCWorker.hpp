@@ -4,7 +4,6 @@
 
 #include "iWorker.hpp"
 
-
 namespace Clone::Workers {
 
 using Clone::IPC::Frame;
@@ -28,7 +27,7 @@ class IPCWorker : public IWorker {
     else {
       _src = nullptr;
       _dst = std::make_unique<std::ofstream>(src, ios::binary);
-      if(_dst->is_open())
+      if (_dst->is_open())
         std::cout << "Opened file " << src << " to write\n";
       else
         assert("BAD INITIALISATION");
@@ -37,18 +36,19 @@ class IPCWorker : public IWorker {
 
   int execute() override
   {
-    do { ; } while (frame.isState(Frame::STATE::INITIALISED));
+    do {
+      ;
+    } while (frame.isState(Frame::STATE::INITIALISED));
 
-    switch (_role)
-    {
+    switch (_role) {
       case ROLE::WRITER:
         frame.setState(Frame::STATE::READY_TO_WRITE);
         writeToSMemory();
-      break;  
+        break;
 
       case ROLE::READER:
         writeFromSMemory();
-      break;
+        break;
 
       default:
         assert("WRONG_ROLE");
@@ -59,7 +59,6 @@ class IPCWorker : public IWorker {
   bool isDone() override { return frame.isState(Frame::STATE::DONE); }
 
  private:
-
   inline void writeToSMemory()
   {
     while (!_src->eof()) {
@@ -68,9 +67,9 @@ class IPCWorker : public IWorker {
         frame.logDataBulk();
         frame.setState(Frame::STATE::READY_TO_READ);
       }
-
     }
-    do{ ;
+    do {
+      ;
     } while (not frame.isState(Frame::STATE::READY_TO_WRITE));
 
     frame.setState(Frame::STATE::END_SOURCE);
@@ -93,4 +92,5 @@ class IPCWorker : public IWorker {
   std::unique_ptr<std::ifstream> _src;
   Frame frame;
 };
+
 }  // namespace Clone::Workers

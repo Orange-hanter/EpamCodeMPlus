@@ -4,7 +4,7 @@
 #include <string>
 
 #include "Startup.hpp"
-#include "Workers/WorkerFactory.hpp"
+#include "WorkerFactory.hpp"
 
 using Clone::WorkerFactory;
 
