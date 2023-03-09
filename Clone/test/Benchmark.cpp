@@ -4,7 +4,7 @@
 #include <numeric>
 #include <vector>
 
-#include "Workers\WorkerFactory.hpp"
+#include "WorkerFactory.hpp"
 
 using namespace std::chrono;
 using std::filesystem::path;
