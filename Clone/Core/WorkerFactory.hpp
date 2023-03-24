@@ -3,42 +3,73 @@
 #include <memory>
 #include <string>
 
+#include "AbstractWorkerFactory.hpp"
 #include "Workers.h"
-
 
 namespace Clone {
 
+namespace Parser {
+    class Configuration;
+}
 
-/*
-@brief Class that produce work
-*/
+class AbstractIPCFactory;
+class BytestreamWorkerFactory;
+class AbstractWorkerFactory;
+
+using spIWorker = std::shared_ptr<Workers::IWorker>;
+
+/**
+ *    @brief Class that produce work
+ */
 class WorkerFactory {
  public:
-  using spIWorker = std::shared_ptr<Workers::IWorker>;
   enum class CopyingMode {
     BitStream,           // byte per byte copying in multithread way
-    SharedMemoryStream,  // per data chunks shared via unified memory 
+    SharedMemoryStream,  // per data chunks shared via unified memory
   };
 
-  explicit WorkerFactory(std::string_view source, std::string_view target);
-
+  WorkerFactory(std::shared_ptr<Parser::Configuration> sp_cfg);
   ~WorkerFactory() = default;
 
-  spIWorker getWorker(std::string source, std::string target,
-                      CopyingMode mode = CopyingMode::BitStream) const;
-
-  spIWorker getWorker(const std::filesystem::path& src,
-                      const std::filesystem::path& dst,
-                      CopyingMode mode = CopyingMode::BitStream) const;
-
-  spIWorker getWorker(CopyingMode mode = CopyingMode::BitStream) const;
-
-  spIWorker getWorker(CopyingMode mode, bool isWriter);
+  Clone::Workers::IWorker* getWorker();
 
  private:
-  CopyingMode _mode;
-  Workers::ROLE _role;
-  std::string _source;
-  std::string _target;
+  AbstractWorkerFactory* getFactory(std::string mode);
+  AbstractWorkerFactory* getFactory(CopyingMode mode);
+
+  std::shared_ptr<Parser::Configuration> _config;
 };
+
+class AbstractIPCFactory : public AbstractWorkerFactory {
+ public:
+  explicit AbstractIPCFactory(std::string source) : _source(source) {}
+
+  AbstractIPCFactory() = delete;
+
+  Clone::Workers::IReader* CreateReader() override;
+
+  Clone::Workers::IWriter* CreateWriter() override;
+
+ private:
+  std::string _source;
+};
+
+class BytestreamWorkerFactory : public AbstractWorkerFactory {
+ public:
+  explicit BytestreamWorkerFactory(std::string source, std::string destination)
+      : _source(source), _destination(destination)
+  {
+  }
+
+  BytestreamWorkerFactory() = delete;
+
+  Clone::Workers::IReader* CreateReader() override;
+
+  Clone::Workers::IWriter* CreateWriter() override;
+
+ private:
+  std::string _source;
+  std::string _destination;
+};
+
 }  // namespace Clone

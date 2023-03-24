@@ -10,15 +10,9 @@ using Clone::WorkerFactory;
 
 int main(int argc, char** argv)
 {
-  auto conf = Clone::StartupConfiguration(argc, argv);
+  auto conf = Clone::Parser::StartupArgumentsParser(argc, argv).getConfiguration();
 
-  auto mode = conf.isFlag("--ipc")
-                  ? WorkerFactory::CopyingMode::SharedMemoryStream
-                  : WorkerFactory::CopyingMode::BitStream;
-
-  auto worker = Clone::WorkerFactory(conf.getParam("--source"),
-                                     conf.getParam("--destination"))
-                    .getWorker(mode, conf.isFlag("--role_host"));
+  auto worker = Clone::WorkerFactory(conf).getWorker();
 
   worker->execute();
 

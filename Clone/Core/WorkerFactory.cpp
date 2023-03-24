@@ -1,63 +1,80 @@
 #include "WorkerFactory.hpp"
-#include "Utils.hpp"
+
+#include <assert.h>
 
 #include <memory>
 #include <typeinfo>
 
+#include "Configuration.hpp"
+#include "Utils.hpp"
 
 namespace Clone {
 
 namespace fs = std::filesystem;
 
 using Workers::ByteStreamWorker;
+using Workers::IPCReader;
 using Workers::IPCWorker;
+using Workers::IPCWriter;
+using Workers::IReader;
 using Workers::IWorker;
+using Workers::IWriter;
+using Prop = Parser::CfgProperties;
 
-WorkerFactory::WorkerFactory(std::string_view source, std::string_view target)
-    : _source(source), _target(target)
+WorkerFactory::WorkerFactory(std::shared_ptr<Parser::Configuration> sp_cfg)
+    : _config(sp_cfg)
 {
 }
 
-WorkerFactory::spIWorker WorkerFactory::getWorker(std::string source,
-                                                  std::string target,
-                                                  CopyingMode mode) const
+IWorker* WorkerFactory::getWorker()
 {
-  target = Utils::ManipulateWithName(source, target);
+  auto factory = getFactory(_config->get_param( Prop::mode));
+  if (_config->get_param(Prop::role) == "HOST")
+    return factory->CreateWriter();
+  else
+    return factory->CreateReader();
+}
 
-  spIWorker workerObj;
+AbstractWorkerFactory* Clone::WorkerFactory::getFactory(std::string mode)
+{
+  if (mode == "IPC")
+    return getFactory(CopyingMode::SharedMemoryStream);
+  else if (mode == "BITSTREAM")
+    return getFactory(CopyingMode::BitStream);
+  return nullptr;
+}
+
+AbstractWorkerFactory* Clone::WorkerFactory::getFactory(CopyingMode mode)
+{
   switch (mode) {
-    case CopyingMode::BitStream:
-      workerObj = std::make_shared<ByteStreamWorker>(source, target);
-      break;
+    case Clone::WorkerFactory::CopyingMode::BitStream:
+      return new BytestreamWorkerFactory(_config->get_param(Prop::source),
+                                         _config->get_param(Prop::destination));
 
-    case CopyingMode::SharedMemoryStream:
-
-      workerObj = std::make_shared<IPCWorker>(source, _role);
-      break;
+    case Clone::WorkerFactory::CopyingMode::SharedMemoryStream:
+      return new AbstractIPCFactory( _config->get_param(Prop::source) );
 
     default:
-      // Do nothing
       break;
   }
-  return workerObj;
+  return nullptr;
 }
 
-WorkerFactory::spIWorker WorkerFactory::getWorker(const fs::path& src,
-                                                  const fs::path& dst,
-                                                  CopyingMode mode) const
+//---------------------------------------------------------------------------------
+IReader* AbstractIPCFactory::CreateReader() { return new IPCReader(_source); }
+
+IWriter* AbstractIPCFactory::CreateWriter() { return new IPCWriter(_source); }
+
+IReader* BytestreamWorkerFactory::CreateReader()
 {
-  return getWorker(src.string(), dst.string(), mode);
+  assert(("Need to implement", false));
+  return reinterpret_cast<IReader*>(nullptr);
 }
 
-WorkerFactory::spIWorker WorkerFactory::getWorker(CopyingMode mode) const
+IWriter* BytestreamWorkerFactory::CreateWriter()
 {
-  return getWorker(_source, _target, mode);
-}
-
-WorkerFactory::spIWorker WorkerFactory::getWorker(CopyingMode mode, bool isWriter)
-{
-  _role = isWriter ? Workers::ROLE::WRITER : Workers::ROLE::READER;
-  return getWorker(_source, _target, mode);
+  assert(("Need to implement", false));
+  return reinterpret_cast<IWriter*>(nullptr);
 }
 
 }  // namespace Clone
