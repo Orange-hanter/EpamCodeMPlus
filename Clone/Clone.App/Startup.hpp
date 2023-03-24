@@ -2,10 +2,12 @@
 #include <argparse/argparse.hpp>
 #include <memory>
 
-namespace Clone {
-class StartupConfiguration {
+#include "Configuration.hpp"
+
+namespace Clone::Parser {
+class StartupArgumentsParser {
  public:
-  StartupConfiguration(int argc, char** argv)
+  StartupArgumentsParser(int argc, char** argv)
   {
     _parser = std::make_unique<argparse::ArgumentParser>("Copy");
 
@@ -20,34 +22,37 @@ class StartupConfiguration {
     _parser->add_argument("-s", "--source")
         .required()
         .default_value<std::string>("-")
-        .help("Absolute path to original file.");
+        .help("Absolute path to original file.")
+        .action([this](const std::string& value) { config->set_param("source", value); });
 
     _parser->add_argument("-o", "--destination")
         .default_value<std::string>("-")
-        .help("Absolute path to the new file.");
+        .help("Absolute path to the new file.")
+        .action([this](const std::string& value) { config->set_param("destination", value); });
 
     _parser->add_argument("-f", "--frame")
         .help("Max size of one package.")
-        .default_value<uint16_t>(32);
+        .default_value<uint16_t>(32)
+        .action([this](const std::string& value) {
+          config->set_param("frame", value);
+        });
 
     _parser->add_argument("--ipc")
         .help("Turn on interprocess communication mode.")
         .default_value(false)
-        .implicit_value(true);
+        .implicit_value(true)
+        .action([this](const std::string& value) { config->set_param("mode", value);
+        });
 
     _parser->add_argument("--role_host")
         .help(
             "Work only with --ipc mode. Take role of host, and fill shared "
-            "memory by data")
+            "memory by data. By default used host mode")
         .default_value(true)
-        .implicit_value(true);
+        .implicit_value(true)
+        .action(
+            [this](const std::string& value) { config->set_param("role", value); });
 
-    _parser->add_argument("--role_client")
-        .help(
-            "Work only with --ipc mode. Take role of client, read data from "
-            "shared memory")
-        .default_value(false)
-        .implicit_value(true);
 
     try {
       _parser->parse_args(argc, argv);
@@ -59,14 +64,21 @@ class StartupConfiguration {
     }
   }
 
+  // deprecated
   std::string getParam(std::string_view parameter) const
   {
-      return _parser->get(parameter);
+    return _parser->get(parameter);
+  }
+
+  std::shared_ptr<Configuration> getConfiguration()
+  {
+    return config;
   }
 
   bool isFlag(std::string_view flag) const { return _parser->is_used(flag); }
 
  private:
   std::unique_ptr<argparse::ArgumentParser> _parser;
+  std::shared_ptr<Configuration> config;
 };
-}  // namespace Clone
+}  // namespace Clone::Parser
