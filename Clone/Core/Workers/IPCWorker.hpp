@@ -1,6 +1,7 @@
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <exception>
 
 #include "iWorker.hpp"
 
@@ -35,6 +36,8 @@ class IPCWriter final : public IWriter {
     _frame.setState(Frame::STATE::READY_TO_WRITE);
 
     while (!_src->eof()) {
+      if (_frame.isState(Frame::STATE::TERMINATE))
+        throw std::exception();
       if (_frame.isState(Frame::STATE::READY_TO_WRITE)) {
         (*_src) >> _frame;
         _frame.logDataBulk();
@@ -78,6 +81,8 @@ class IPCReader final : public IReader {
     } while (_frame.isState(Frame::STATE::INITIALISED));
 
     while (not _frame.isState(Frame::STATE::END_SOURCE)) {
+      if (_frame.isState(Frame::STATE::TERMINATE))
+        throw std::exception();
       if (_frame.isState(Frame::STATE::READY_TO_READ)) {
         _frame.logDataBulk();
         (*_dst) << _frame;

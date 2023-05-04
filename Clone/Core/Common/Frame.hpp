@@ -9,6 +9,7 @@
 #include <memory>
 #include <mutex>
 #include <sstream>
+
 namespace Clone {
 
 using byte = char;
@@ -81,11 +82,36 @@ class Frame {
   size_t _frameSize;
   T* _buf;
 
-  static const size_t defaultFrameSize = 32;
+  static const size_t defaultFrameSize = 64;
 };
 
 namespace IPC {
+struct HexCharStruct {
+  unsigned char c;
+  explicit HexCharStruct(unsigned char _c) : c(_c) {}
 
+  friend std::ostream& operator<<(std::ostream& o, const HexCharStruct& hs)
+  {
+    return (o << std::hex << (int)hs.c);
+  }
+
+  static inline HexCharStruct to_hex(unsigned char _c)
+  {
+    return HexCharStruct(_c);
+  }
+};
+template <typename T>
+inline void print_mem(const T* pMem, size_t len)
+{
+  std::cout << "Memory block at:" << pMem << " with length:" << std::dec << len
+            << '\n';
+  for (auto i = 1; i < len; i++) {
+    std::cout << HexCharStruct::to_hex(*((unsigned char*)pMem + i - 1));
+    if (i % 4 == 0) std::cout << ' ';
+    if (!(i % 16)) std::cout << '\n';
+  }
+  std::cout << '\n';
+}
 class Frame {
  public:
   enum class STATE {
@@ -95,7 +121,8 @@ class Frame {
     READY_TO_READ,
     READY_TO_WRITE,
     END_SOURCE,
-    DONE
+    DONE,
+    TERMINATE
   };
 
   struct DataBulk {
@@ -133,6 +160,23 @@ class Frame {
       }
       exit(3);
     }
+    _old_handler = set_terminate([]() {
+      HANDLE hMapFile =
+          OpenFileMapping(FILE_MAP_ALL_ACCESS,  // read/write access
+                          FALSE,                // do not inherit the name
+                          TEXT(szName));        // name of mapping object
+      if (hMapFile != NULL) {
+        auto pMem =
+            (TRef)MapViewOfFile(hMapFile,  // handle to file mapping object
+                                FILE_MAP_ALL_ACCESS,  // read/write access
+                                0, 0, defaultFrameSize);
+        pMem->_state = STATE::TERMINATE;
+        UnmapViewOfFile(pMem);
+        CloseHandle(hMapFile);
+      }
+      std::cout << "Memory utilized. Sayanara!";
+    });
+
     if (isState(STATE::START)) {
       new (_buf) T();
       setState(STATE::INITIALISED);
@@ -147,6 +191,7 @@ class Frame {
 
   ~Frame()
   {
+    set_terminate(_old_handler);
     UnmapViewOfFile(_buf);
     CloseHandle(hMapFile);
   }
@@ -162,8 +207,8 @@ class Frame {
   void setState(STATE state)
   {
     std::lock_guard<std::mutex> lock(_m);
-    //std::cout << "\nState " << static_cast<int>(_buf->_state) << " to "
-    //          << static_cast<int>(state) << '\n';
+    // std::cout << "\nState " << static_cast<int>(_buf->_state) << " to "
+    //           << static_cast<int>(state) << '\n';
     _buf->_state = state;
   }
 
@@ -206,6 +251,7 @@ class Frame {
     return ofs;
   }
 
+ private:
   Frame(const Frame*) = delete;
   Frame(Frame*) = delete;
   Frame& operator=(const Frame*) = delete;
@@ -216,6 +262,7 @@ class Frame {
   static inline const char szName[] = {"Global\\MyFileMappingObject"};
   static const size_t defaultFrameSize = sizeof(DataBulk);
   [[maybe_unused]] HANDLE hMapFile;
+  std::terminate_handler _old_handler;
   std::mutex _m;
   TRef _buf;
 };
