@@ -10,6 +10,7 @@ namespace Clone {
 
 namespace Parser {
     class Configuration;
+    enum class CopyingMode;
 }
 
 class AbstractIPCFactory;
@@ -23,10 +24,7 @@ using spIWorker = std::shared_ptr<Workers::IWorker>;
  */
 class WorkerFactory {
  public:
-  enum class CopyingMode {
-    BitStream,           // byte per byte copying in multithread way
-    SharedMemoryStream,  // per data chunks shared via unified memory
-  };
+
 
   WorkerFactory(std::shared_ptr<Parser::Configuration> sp_cfg);
   ~WorkerFactory() = default;
@@ -34,8 +32,8 @@ class WorkerFactory {
   Clone::Workers::IWorker* getWorker();
 
  private:
-  AbstractWorkerFactory* getFactory(std::string mode);
-  AbstractWorkerFactory* getFactory(CopyingMode mode);
+  //AbstractWorkerFactory* getFactory(std::string_view mode);
+  AbstractWorkerFactory* getFactory(Parser::CopyingMode mode);
 
   std::shared_ptr<Parser::Configuration> _config;
 };
@@ -63,11 +61,11 @@ class BytestreamWorkerFactory : public AbstractWorkerFactory {
 
   BytestreamWorkerFactory() = delete;
 
-  Clone::Workers::IReader* CreateReader() override;
 
   Clone::Workers::IWriter* CreateWriter() override;
 
  private:
+  Clone::Workers::IReader* CreateReader() override;
   std::string _source;
   std::string _destination;
 };

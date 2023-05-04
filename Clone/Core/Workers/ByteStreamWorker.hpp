@@ -1,11 +1,11 @@
 #include "iWorker.hpp"
 
 namespace Clone::Workers {
-class ByteStreamWorker final : public IWorker {
+class ByteStreamWriter final : public IWriter {
  public:
-  ByteStreamWorker() = delete;
+  ByteStreamWriter() = delete;
 
-  explicit ByteStreamWorker(std::string src, std::string dst)
+  explicit ByteStreamWriter(const std::string& src, const std::string& dst)
       : _dst(std::make_unique<std::ofstream>(dst, ios::binary)),
         _src(std::make_unique<std::ifstream>(src, ios::binary))
   {
