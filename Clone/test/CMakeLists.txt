@@ -10,12 +10,12 @@ set(BENCHMARK_SOURCE_FILES
 )
 
 add_executable(Clone.Test ${SOURCE_FILES})
-add_executable(Clone.Benchmark ${BENCHMARK_SOURCE_FILES})
+#add_executable(Clone.Benchmark ${BENCHMARK_SOURCE_FILES})
 
 set_target_properties(Clone.Test PROPERTIES FOLDER ${FOLDER})
 
 target_link_libraries(Clone.Test PRIVATE Catch2::Catch2WithMain)
-target_link_libraries(Clone.Benchmark PUBLIC Copy.Core)
+#target_link_libraries(Clone.Benchmark PRIVATE Clone.Core)
 
 #include(CTest)
 #include(Catch)
