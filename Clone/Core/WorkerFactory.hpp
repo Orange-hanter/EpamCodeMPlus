@@ -70,4 +70,22 @@ class BytestreamWorkerFactory : public AbstractWorkerFactory {
   std::string _destination;
 };
 
+
+class NetworkWorkerFactory : public AbstractWorkerFactory {
+ public:
+  explicit NetworkWorkerFactory(std::string source)
+      : _source(source)
+  {
+  }
+
+  NetworkWorkerFactory() = delete;
+
+
+  Clone::Workers::IWriter* CreateWriter() override;
+
+ private:
+  Clone::Workers::IReader* CreateReader() override;
+  std::string _source;
+};
+
 }  // namespace Clone

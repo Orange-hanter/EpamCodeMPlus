@@ -54,7 +54,7 @@ if __name__ == "__main__":
         multithread_way(filename, copy_path)
         ipc_vay(filename, copy_path)
     #TODO make sure the measure value is correct
-    print(f"Average copying speed is: {mean(multithread_stat)/MB} MiB/s")
-    print(f"Average ipc time: {mean(ipc_stat)/MB} MiB/s")
+    print(f"Average copying speed is: {mean(multithread_stat)/MB:.3f} MB/s")
+    print(f"Average ipc time: {mean(ipc_stat)/MB:.3f} MB/s")
     os.remove(filename)
     

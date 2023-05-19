@@ -17,6 +17,7 @@ include(${CMAKE_BINARY_DIR}/conan.cmake)
 conan_cmake_configure(REQUIRES
   argparse/2.9
   catch2/3.1.0
+  asio/1.27.0
   GENERATORS cmake_find_package_multi)
 
 # This detects system settings such as platform, compiler, etc.
@@ -35,3 +36,4 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
 # List of find_packages for each external library that we use.
 find_package(argparse REQUIRED)
 find_package(Catch2 REQUIRED)
+find_package(asio REQUIRED)

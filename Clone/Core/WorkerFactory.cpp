@@ -45,6 +45,9 @@ AbstractWorkerFactory* Clone::WorkerFactory::getFactory(CopyingMode mode)
     case CopyingMode::SharedMemoryStream:
       return new AbstractIPCFactory(_config->get_param<std::string>(Prop::source));
 
+    case CopyingMode::NetworkSharing:
+      return new NetworkWorkerFactory(_config->get_param<std::string>(Prop::source));
+
     default:
       break;
   }
@@ -67,4 +70,8 @@ IWriter* BytestreamWorkerFactory::CreateWriter()
   return new Workers::ByteStreamWriter(_source, _destination);
 }
 
+//------------------------------------------------------------------------------
+IReader* NetworkWorkerFactory::CreateReader () { return new NetworkReader(); }
+
+IWriter* NetworkWorkerFactory::CreateWriter () { return new NetworkWriter(); }
 }  // namespace Clone

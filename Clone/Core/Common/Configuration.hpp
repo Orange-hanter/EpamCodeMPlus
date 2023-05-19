@@ -8,6 +8,7 @@ namespace Clone::Parser {
 enum class CopyingMode {
   BitStream,           // byte per byte copying in multithread way
   SharedMemoryStream,  // per data chunks shared via unified memory
+  NetworkSharing,      // per network... obviously 
 };
 
 struct CfgProperties {

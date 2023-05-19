@@ -31,5 +31,9 @@ Algorithm could be outdate
 
 ## How to run
 ```sh
-Clone.App.exe -s .\path\to\file -o C:\absolute\path\to\destination\folder
+Clone.App.exe -s .\path\to\file -d C:\absolute\path\to\destination\folder
 ```
+
+
+Average multithread time: 7.209716582298279
+Average ipc time: 6.478101754188538
