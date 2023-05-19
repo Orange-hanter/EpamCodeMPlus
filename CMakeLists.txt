@@ -8,14 +8,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CXX_EXTENSIONS off)
 
-# Oprions
+# Options
 option(ENABLE_CCACHE "Enable the usage of Ccache." OFF)
 option(ENABLE_WARNINGS "Enable to add warnings to a target." OFF)
 
 # Cmake modules
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/")
 
-# CMake properies
+# CMake properties
 include(CMakeConfig)
 
 # Conan and dependencies
@@ -32,4 +32,5 @@ if(ENABLE_CCACHE)
     include(Ccache)
 endif()
 
-add_subdirectory(Clone)
+add_subdirectory(Src)
+add_subdirectory(Test)

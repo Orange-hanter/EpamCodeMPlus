@@ -16,8 +16,8 @@ include(${CMAKE_BINARY_DIR}/conan.cmake)
 # Uses conan.cmake functionality to list the needed packages.
 conan_cmake_configure(REQUIRES
   argparse/2.9
-  catch2/3.1.0
-  asio/1.27.0
+  catch2/3.3.2
+  asio/1.28.0
   GENERATORS cmake_find_package_multi)
 
 # This detects system settings such as platform, compiler, etc.

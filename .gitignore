@@ -1,6 +1,7 @@
-
+.idea
 .vs
 .cache
 .vscode
 build/
 out/
+/cmake-build-debug-gcc-1230-x86_64/
