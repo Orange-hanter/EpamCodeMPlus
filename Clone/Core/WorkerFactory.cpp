@@ -74,4 +74,5 @@ IWriter* BytestreamWorkerFactory::CreateWriter()
 IReader* NetworkWorkerFactory::CreateReader () { return new NetworkReader(); }
 
 IWriter* NetworkWorkerFactory::CreateWriter () { return new NetworkWriter(); }
+  
 }  // namespace Clone

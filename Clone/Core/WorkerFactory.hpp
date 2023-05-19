@@ -70,7 +70,6 @@ class BytestreamWorkerFactory : public AbstractWorkerFactory {
   std::string _destination;
 };
 
-
 class NetworkWorkerFactory : public AbstractWorkerFactory {
  public:
   explicit NetworkWorkerFactory(std::string source)
