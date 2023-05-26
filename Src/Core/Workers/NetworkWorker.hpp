@@ -1,8 +1,9 @@
 #pragma once
 
-#include "iWorker.hpp"
 #include <asio.hpp>
 #include <utility>
+
+#include "iWorker.hpp"
 
 namespace Clone::Workers {
 
@@ -10,33 +11,36 @@ namespace Clone::Workers {
 ///          save the data. Someone who write file to end destination
 class NetworkWriter final : public IWriter {
   asio::io_context _ioContext;
-  asio::ip::tcp::acceptor _acceptor;
+  asio::ip::tcp::acceptor* _acceptor{nullptr};
 
   std::filesystem::path _repositoryPath;
   std::string _listeningPort;
 
  public:
-
   NetworkWriter(const std::string& repositoryPath, std::string listeningPort)
-      :_repositoryPath(repositoryPath), _listeningPort(std::move(listeningPort))
+      : _repositoryPath(repositoryPath),
+        _listeningPort(std::move(listeningPort))
   {
-
   }
 
-  int execute() override { return 42; };
+  int execute() override
+  {
+    receiveFile();
+    return 42;
+  };
 
   bool isDone() override { return true; };
 
  private:
-
   void start()
   {
     using asio::ip::tcp;
-    _acceptor = tcp::acceptor(
+    _acceptor = new tcp::acceptor(
         _ioContext, tcp::endpoint(tcp::v4(), std::stoi(_listeningPort)));
   }
 
-  void receiveFile() {
+  void receiveFile()
+  {
     using asio::ip::tcp;
     try {
       // Create an acceptor to listen for incoming connections
@@ -45,7 +49,7 @@ class NetworkWriter final : public IWriter {
 
       // Accept a new connection
       tcp::socket socket(_ioContext);
-      _acceptor.accept(socket);
+      _acceptor->accept(socket);
 
       std::string filename = genTempFileName();
       // Open the file to save the received data
@@ -66,17 +70,16 @@ class NetworkWriter final : public IWriter {
       file.close();
       socket.close();
 
-      std::cout << "File transfer complete. Received file: " << filename << std::endl;
-    } catch (const std::exception& ex) {
+      std::cout << "File transfer complete. Received file: " << filename
+                << std::endl;
+    }
+    catch (const std::exception& ex) {
       std::cerr << "Exception: " << ex.what() << std::endl;
     }
   }
 
   /// @brief
-  std::string genTempFileName()
-  {
-    return {"fileName"};
-  }
+  std::string genTempFileName() { return {"fileName"}; }
 };
 
 /// @brief Role of reader is just Client like. Read source and send data
@@ -89,23 +92,31 @@ class NetworkReader final : public IReader {
   std::string _serverAddress;
 
  public:
-  NetworkReader(std::string  serverAddress, std::string  serverPort, const std::string& filePath )
-  : _filePath(filePath), _serverAddress(std::move(serverAddress)), _serverPort(std::move(serverPort))
+  NetworkReader(std::string serverAddress, std::string serverPort,
+                const std::string& filePath)
+      : _filePath(filePath),
+        _serverAddress(std::move(serverAddress)),
+        _serverPort(std::move(serverPort))
   {
   }
-  int execute() override { sendFile(); };
+  int execute() override
+  {
+    sendFile();
+    return 42;
+  };
   bool isDone() override { return _done; };
 
  private:
-
-  void sendFile() {
+  void sendFile()
+  {
     using asio::ip::tcp;
     try {
       asio::io_context ioContext;
 
       // Resolve the server address and port
       tcp::resolver resolver(ioContext);
-      tcp::resolver::results_type endpoints = resolver.resolve(_serverAddress, _serverPort);
+      tcp::resolver::results_type endpoints =
+          resolver.resolve(_serverAddress, _serverPort);
 
       // Create a socket and connect to the server
       tcp::socket socket(ioContext);
@@ -130,10 +141,11 @@ class NetworkReader final : public IReader {
       socket.close();
 
       std::cout << "File transfer complete." << std::endl;
-    } catch (const std::exception& ex) {
+    }
+    catch (const std::exception& ex) {
       std::cerr << "Exception: " << ex.what() << std::endl;
     }
   }
 };
 
-} /// namespace Clone::Workers
+}  // namespace Clone::Workers

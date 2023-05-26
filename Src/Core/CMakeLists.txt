@@ -3,10 +3,12 @@ set(FOLDER ${PROJECT_NAME})
 
 set(LIB_SOURCE_FILES
         WorkerFactory.cpp
+        Factories/NetworkWorkerFactory.cpp
 )
 
 set(LIB_HEADER_FILES
-        AbstractWorkerFactory.hpp
+        Factories/AbstractWorkerFactory.hpp
+        Factories/NetworkWorkerFactory.hpp
         WorkerFactory.hpp
         Workers/iWorker.hpp
         Workers/Workers.h
@@ -18,13 +20,14 @@ set(LIB_HEADER_FILES
         Common/IPCFrame.hpp
         Common/Utils.hpp
         Common/Configuration.hpp
-)
+        TransportLayer/TransportLayer.hpp)
 
-set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} )
+set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} TransportLayer/iTransportLayer.hpp)
 
 add_library(${TARGET} STATIC ${SOURCE_FILES})
 
 target_include_directories(${TARGET} PUBLIC ./Common
-                                            ./Workers)
+                                            ./Workers
+                                            ./Factories)
 
 target_link_libraries(${TARGET} PUBLIC asio::asio)

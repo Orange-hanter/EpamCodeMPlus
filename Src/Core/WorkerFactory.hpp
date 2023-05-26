@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "AbstractWorkerFactory.hpp"
 #include "Workers.h"
@@ -26,7 +27,7 @@ class WorkerFactory {
  public:
 
 
-  WorkerFactory(std::shared_ptr<Parser::Configuration> sp_cfg);
+  explicit WorkerFactory(std::shared_ptr<Parser::Configuration> sp_cfg);
   ~WorkerFactory() = default;
 
   Clone::Workers::IWorker* getWorker();
@@ -40,7 +41,7 @@ class WorkerFactory {
 
 class AbstractIPCFactory : public AbstractWorkerFactory {
  public:
-  explicit AbstractIPCFactory(std::string source) : _source(source) {}
+  explicit AbstractIPCFactory(std::string source) : _source(std::move(source)) {}
 
   AbstractIPCFactory() = delete;
 
@@ -55,7 +56,7 @@ class AbstractIPCFactory : public AbstractWorkerFactory {
 class BytestreamWorkerFactory : public AbstractWorkerFactory {
  public:
   explicit BytestreamWorkerFactory(std::string source, std::string destination)
-      : _source(source), _destination(destination)
+      : _source(std::move(source)), _destination(std::move(destination))
   {
   }
 
@@ -70,21 +71,5 @@ class BytestreamWorkerFactory : public AbstractWorkerFactory {
   std::string _destination;
 };
 
-class NetworkWorkerFactory : public AbstractWorkerFactory {
- public:
-  explicit NetworkWorkerFactory(std::string source)
-      : _source(source)
-  {
-  }
-
-  NetworkWorkerFactory() = delete;
-
-
-  Clone::Workers::IWriter* CreateWriter() override;
-
- private:
-  Clone::Workers::IReader* CreateReader() override;
-  std::string _source;
-};
 
 }  // namespace Clone

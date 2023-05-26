@@ -18,6 +18,7 @@ conan_cmake_configure(REQUIRES
   argparse/2.9
   catch2/3.3.2
   asio/1.28.0
+  protobuf/3.21.9
   GENERATORS cmake_find_package_multi)
 
 # This detects system settings such as platform, compiler, etc.

@@ -1,6 +1,6 @@
 #include "WorkerFactory.hpp"
 
-#include <assert.h>
+#include <cassert>
 
 #include <memory>
 #include <typeinfo>
@@ -71,9 +71,6 @@ IWriter* BytestreamWorkerFactory::CreateWriter()
 }
 
 //------------------------------------------------------------------------------
-IReader* NetworkWorkerFactory::CreateReader () { return new Workers::NetworkReader(); }
 
-IWriter* NetworkWorkerFactory::CreateWriter () { return new Workers::NetworkWriter(
-      asio::ip::tcp::acceptor(asio::any_io_executor())); }
   
 }  // namespace Clone
