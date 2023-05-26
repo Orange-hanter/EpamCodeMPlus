@@ -1,12 +1,12 @@
 #include "WorkerFactory.hpp"
 
 #include <cassert>
-
 #include <memory>
 #include <typeinfo>
 #include <utility>
 
 #include "Configuration.hpp"
+#include "NetworkWorkerFactory.hpp"
 #include "Utils.hpp"
 
 namespace Clone {

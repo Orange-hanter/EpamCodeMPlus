@@ -2,8 +2,8 @@
 // Created by daniil on 5/19/23.
 //
 
-#ifndef EPAMMIDDLE_TRANSPORTLAYER_HPP
-#define EPAMMIDDLE_TRANSPORTLAYER_HPP
+#ifndef EPAMMIDDLE_TCPTRANSPORTLAYER_HPP
+#define EPAMMIDDLE_TCPTRANSPORTLAYER_HPP
 
 #include <asio.hpp>
 
@@ -87,4 +87,4 @@ class TCPAcceptor : public iTransportLayer {
 
 }  // namespace Clone::TransportLayer
 
-#endif  // EPAMMIDDLE_TRANSPORTLAYER_HPP
+#endif  // EPAMMIDDLE_TCPTRANSPORTLAYER_HPP

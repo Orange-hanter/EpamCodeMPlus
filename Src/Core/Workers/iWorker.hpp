@@ -1,17 +1,18 @@
 #pragma once
+#include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <filesystem>
 #include <memory>
-
 #include <thread>
 
 #include "Frame.hpp"
 #include "SafeDeque.hpp"
+#include "iTransportLayer.hpp"
 
 namespace Clone::Workers {
 
 using std::ios;
+using TransportLayer::iTransportLayer;
 
 class IWorker {
  public:
@@ -20,17 +21,23 @@ class IWorker {
   virtual ~IWorker() = default;
 };
 
-class IReader: public IWorker
-{
-  public:
-    ~IReader() override = default;
+class IReader : public IWorker {
+ public:
+  ~IReader() override = default;
+  IReader() = default;
+
+ protected:
+  iTransportLayer* _transport{nullptr};
 };
 
+class IWriter : public IWorker {
+ public:
+  ~IWriter() override = default;
+  IWriter() = default;
+  IWriter(iTransportLayer* tl) : _transport(tl) {}
 
-class IWriter: public IWorker
-{
-  public:
-    ~IWriter() override = default;
+ protected:
+  iTransportLayer* _transport{nullptr};
 };
 
 }  // namespace Clone::Workers

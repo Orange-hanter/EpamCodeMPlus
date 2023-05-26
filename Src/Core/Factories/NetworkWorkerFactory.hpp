@@ -21,10 +21,11 @@ class NetworkWorkerFactory : public AbstractWorkerFactory {
 
   Clone::Workers::IWriter* CreateWriter() override;
 
- private:
   Clone::Workers::IReader* CreateReader() override;
+
+ private:
   std::string _source;
-  std::string _adres;
+  std::string _adr;
   std::string _port;
 };
 

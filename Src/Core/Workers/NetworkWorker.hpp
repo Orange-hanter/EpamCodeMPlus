@@ -1,7 +1,10 @@
 #pragma once
 
 #include <asio.hpp>
+
+#include <list>
 #include <utility>
+#include <filesystem>
 
 #include "iWorker.hpp"
 
@@ -10,11 +13,13 @@ namespace Clone::Workers {
 /// @brief  NetworkWriter implement Server part. Keep connection and
 ///          save the data. Someone who write file to end destination
 class NetworkWriter final : public IWriter {
-  asio::io_context _ioContext;
-  asio::ip::tcp::acceptor* _acceptor{nullptr};
+  using fs = std::filesystem;
 
   std::filesystem::path _repositoryPath;
   std::string _listeningPort;
+  std::list<std::string> _downloadedList;
+
+  std::condition_variable _cv;
 
  public:
   NetworkWriter(const std::string& repositoryPath, std::string listeningPort)
@@ -23,63 +28,80 @@ class NetworkWriter final : public IWriter {
   {
   }
 
-  int execute() override
-  {
-    receiveFile();
-    return 42;
-  };
+  int execute() override { return 42; };
 
   bool isDone() override { return true; };
 
+  void stopServer()
+  {
+    // TODO: Stop server and modify indicator that everything is stopped
+  }
+
  private:
-  void start()
-  {
-    using asio::ip::tcp;
-    _acceptor = new tcp::acceptor(
-        _ioContext, tcp::endpoint(tcp::v4(), std::stoi(_listeningPort)));
-  }
-
-  void receiveFile()
-  {
-    using asio::ip::tcp;
-    try {
-      // Create an acceptor to listen for incoming connections
-
-      std::cout << "Waiting for incoming connection..." << std::endl;
-
-      // Accept a new connection
-      tcp::socket socket(_ioContext);
-      _acceptor->accept(socket);
-
-      std::string filename = genTempFileName();
-      // Open the file to save the received data
-      std::ofstream file(filename, std::ios::binary);
-      if (!file) {
-        std::cerr << "Failed to create file: " << filename << std::endl;
-        return;
-      }
-
-      // Receive and save the data
-      std::vector<char> buffer(4096);
-      std::size_t bytesRead = 0;
-      while ((bytesRead = socket.read_some(asio::buffer(buffer))) > 0) {
-        file.write(buffer.data(), bytesRead);
-      }
-
-      // Close the file and the socket
-      file.close();
-      socket.close();
-
-      std::cout << "File transfer complete. Received file: " << filename
-                << std::endl;
-    }
-    catch (const std::exception& ex) {
-      std::cerr << "Exception: " << ex.what() << std::endl;
-    }
-  }
-
   /// @brief
-  std::string genTempFileName() { return {"fileName"}; }
+  std::string genTempFileName(const std::string& fileName)
+  {
+    auto now = std::chrono::system_clock::now();
+    auto time = std::chrono::system_clock::to_time_t(now);
+
+    std::stringstream ss;
+
+    ss << std::put_time(std::localtime(&time), "%Y%m%d%H%M%S");
+
+    auto millisec = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        now.time_since_epoch()) %
+                    1000;
+
+    ss << millisec.count();
+    ss << "_" << fileName;
+    return ss.str();
+  }
+
+  std::string calculateHash(const std::string& filePath) {
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file) {
+      return "";
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+
+    std::hash<std::string> hasher;
+    return std::to_string(hasher(buffer.str()));
+  }
+
+  void copyFile(const std::string& sourcePath, const std::string& destinationPath) {
+    std::ifstream sourceFile(sourcePath, std::ios::binary);
+    std::ofstream destinationFile(destinationPath, std::ios::binary);
+
+    if (sourceFile && destinationFile) {
+      destinationFile << sourceFile.rdbuf();
+      std::cout << "File copied successfully." << std::endl;
+    } else {
+      std::cout << "Failed to copy file." << std::endl;
+    }
+  }
+
+  void processFile(const std::string& filePath, const std::string& directoryPath) {
+    std::string fileName = fs::path(filePath).filename().string();
+    std::string hash = calculateHash(filePath);
+
+    fs::path destinationPath = fs::path(directoryPath) / fileName;
+    if (fs::exists(destinationPath) && calculateHash(destinationPath.string()) == hash) {
+      std::cout << "File with the same name and hash already exists. Skipping." << std::endl;
+      return;
+    }
+
+    std::size_t underscorePos = fileName.find('_');
+    if (underscorePos != std::string::npos) {
+      fileName = fileName.substr(underscorePos + 1);
+    }
+
+    destinationPath = fs::path(directoryPath) / fileName;
+    copyFile(filePath, destinationPath.string());
+  }
+
+
 };
 
 /// @brief Role of reader is just Client like. Read source and send data
@@ -99,53 +121,10 @@ class NetworkReader final : public IReader {
         _serverPort(std::move(serverPort))
   {
   }
-  int execute() override
-  {
-    sendFile();
-    return 42;
-  };
+  int execute() override { return 42; };
   bool isDone() override { return _done; };
 
  private:
-  void sendFile()
-  {
-    using asio::ip::tcp;
-    try {
-      asio::io_context ioContext;
-
-      // Resolve the server address and port
-      tcp::resolver resolver(ioContext);
-      tcp::resolver::results_type endpoints =
-          resolver.resolve(_serverAddress, _serverPort);
-
-      // Create a socket and connect to the server
-      tcp::socket socket(ioContext);
-      asio::connect(socket, endpoints);
-
-      // Open the file to send
-      std::ifstream file(_filePath, std::ios::binary);
-      if (!file) {
-        std::cerr << "Failed to open file: " << _filePath << std::endl;
-        _done = true;
-        return;
-      }
-
-      // Read and send the file data
-      std::vector<char> buffer(_packageSize);
-      while (file.read(buffer.data(), buffer.size())) {
-        asio::write(socket, asio::buffer(buffer.data(), file.gcount()));
-      }
-
-      // Close the file and the socket
-      file.close();
-      socket.close();
-
-      std::cout << "File transfer complete." << std::endl;
-    }
-    catch (const std::exception& ex) {
-      std::cerr << "Exception: " << ex.what() << std::endl;
-    }
-  }
 };
 
 }  // namespace Clone::Workers

@@ -20,14 +20,16 @@ set(LIB_HEADER_FILES
         Common/IPCFrame.hpp
         Common/Utils.hpp
         Common/Configuration.hpp
-        TransportLayer/TransportLayer.hpp)
+        TransportLayer/TCPTransportLayer.hpp
+        TransportLayer/iTransportLayer.hpp)
 
-set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} TransportLayer/iTransportLayer.hpp)
+set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} )
 
 add_library(${TARGET} STATIC ${SOURCE_FILES})
 
 target_include_directories(${TARGET} PUBLIC ./Common
                                             ./Workers
-                                            ./Factories)
+                                            ./Factories
+                                            ./TransportLayer)
 
 target_link_libraries(${TARGET} PUBLIC asio::asio)
