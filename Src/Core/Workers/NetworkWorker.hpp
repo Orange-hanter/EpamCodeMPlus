@@ -8,12 +8,14 @@
 
 #include "iWorker.hpp"
 
+
 namespace Clone::Workers {
+namespace fs = std::filesystem;
+
 
 /// @brief  NetworkWriter implement Server part. Keep connection and
 ///          save the data. Someone who write file to end destination
 class NetworkWriter final : public IWriter {
-  using fs = std::filesystem;
 
   std::filesystem::path _repositoryPath;
   std::string _listeningPort;
@@ -70,7 +72,7 @@ class NetworkWriter final : public IWriter {
     return std::to_string(hasher(buffer.str()));
   }
 
-  void copyFile(const std::string& sourcePath, const std::string& destinationPath) {
+  void copyFile(const fs::path& sourcePath, fs::path destinationPath) {
     std::ifstream sourceFile(sourcePath, std::ios::binary);
     std::ofstream destinationFile(destinationPath, std::ios::binary);
 

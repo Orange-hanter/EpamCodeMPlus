@@ -11,6 +11,7 @@ set(CXX_EXTENSIONS off)
 # Options
 option(ENABLE_CCACHE "Enable the usage of Ccache." OFF)
 option(ENABLE_WARNINGS "Enable to add warnings to a target." OFF)
+option(ENABLE_PROTOBUF "GENERATE PROTOBUF CLASSES." ON)
 
 # Cmake modules
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/")
@@ -32,5 +33,11 @@ if(ENABLE_CCACHE)
     include(Ccache)
 endif()
 
+# Protobuf
+if(ENABLE_PROTOBUF)
+    include(Protobuf)
+endif()
+
 add_subdirectory(Src)
+add_subdirectory(App)
 add_subdirectory(Test)

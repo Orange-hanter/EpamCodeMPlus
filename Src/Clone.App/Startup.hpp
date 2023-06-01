@@ -13,7 +13,7 @@ class StartupArgumentsParser {
     _config = std::make_unique<Configuration>();
 
     _parser->add_description(
-        "Copy tool app implement simple 2 threaded \"copy\" tool."
+        "Copy tool App implement simple 2 threaded \"copy\" tool."
         "Tool should be implemented as a console application."
         "Tool should accept 2 parameters source filename and target filename."
         "Copying logic should be organized with help of 2 threads."

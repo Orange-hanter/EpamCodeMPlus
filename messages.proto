@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package Filetransfer;
+
+message FileTransferRequest {
+  string file_name = 1;
+  string md5_hash = 2;
+  uint64 file_size_kb = 3;
+}
+
+message FileChunk {
+  uint32 sequence_num = 1;
+  bytes data = 2;
+}
+
+message FileTransferResponse {
+  int32 return_code = 1;
+  string error_message = 2;
+}

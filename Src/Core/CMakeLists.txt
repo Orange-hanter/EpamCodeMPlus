@@ -23,7 +23,7 @@ set(LIB_HEADER_FILES
         TransportLayer/TCPTransportLayer.hpp
         TransportLayer/iTransportLayer.hpp)
 
-set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} )
+set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} TransportLayer/Downloader.hpp TransportLayer/Connection.hpp)
 
 add_library(${TARGET} STATIC ${SOURCE_FILES})
 
