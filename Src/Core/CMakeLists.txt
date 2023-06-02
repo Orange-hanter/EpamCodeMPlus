@@ -31,13 +31,15 @@ set(PROTOBUF_SRC
                 Messages/messages.pb.h
 )
 
-set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} ${PROTOBUF_SRC})
+set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} ${PROTOBUF_SRC} TransportLayer/DlManager.hpp TransportLayer/Downloader.cpp)
 
 add_library(${TARGET} STATIC ${SOURCE_FILES})
 
 target_include_directories(${TARGET} PUBLIC ./Common
                                             ./Workers
                                             ./Factories
-                                            ./TransportLayer)
+                                            ./TransportLayer
+                                            ./Messages
+)
 
 target_link_libraries(${TARGET} PUBLIC asio::asio)

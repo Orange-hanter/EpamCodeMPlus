@@ -4,10 +4,9 @@
 
 #include <list>
 #include <utility>
-#include <filesystem>
 
 #include "iWorker.hpp"
-
+#include "TCPTransportLayer.hpp"
 
 namespace Clone::Workers {
 namespace fs = std::filesystem;
@@ -17,20 +16,17 @@ namespace fs = std::filesystem;
 ///          save the data. Someone who write file to end destination
 class NetworkWriter final : public IWriter {
 
-  std::filesystem::path _repositoryPath;
-  std::string _listeningPort;
-  std::list<std::string> _downloadedList;
-
-  std::condition_variable _cv;
-
  public:
   NetworkWriter(const std::string& repositoryPath, std::string listeningPort)
       : _repositoryPath(repositoryPath),
-        _listeningPort(std::move(listeningPort))
+        _listeningPort(std::move(listeningPort)),
+        m_acceptor_ptr()
   {
   }
 
-  int execute() override { return 42; };
+  int execute() override {
+      //TODO: start here handler that monitor queue of downloaded files
+  };
 
   bool isDone() override { return true; };
 
@@ -40,36 +36,14 @@ class NetworkWriter final : public IWriter {
   }
 
  private:
-  /// @brief
-  std::string genTempFileName(const std::string& fileName)
-  {
-    auto now = std::chrono::system_clock::now();
-    auto time = std::chrono::system_clock::to_time_t(now);
 
-    std::stringstream ss;
-
-    ss << std::put_time(std::localtime(&time), "%Y%m%d%H%M%S");
-
-    auto millisec = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        now.time_since_epoch()) %
-                    1000;
-
-    ss << millisec.count();
-    ss << "_" << fileName;
-    return ss.str();
-  }
-
-  std::string calculateHash(const std::string& filePath) {
-    std::ifstream file(filePath, std::ios::binary);
-    if (!file) {
-      return "";
-    }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-
-    std::hash<std::string> hasher;
-    return std::to_string(hasher(buffer.str()));
+  void file_handler(fs::path newFile /*maybe need change for some file-descrioptor*/){
+    /*TODO:
+     * 1. if this handler was called, new file was downloaded
+     * 2. calc or get data from file-descriptor and compare with DB(need to implement)
+     * 3. if file exist and hash equal - skip next processing
+     * 4. else put new file to repo with name {datetime#downloaded_file_name}
+     * */
   }
 
   void copyFile(const fs::path& sourcePath, fs::path destinationPath) {
@@ -83,6 +57,8 @@ class NetworkWriter final : public IWriter {
       std::cout << "Failed to copy file." << std::endl;
     }
   }
+
+  std::string calculateHash(fs::path);
 
   void processFile(const std::string& filePath, const std::string& directoryPath) {
     std::string fileName = fs::path(filePath).filename().string();
@@ -103,7 +79,13 @@ class NetworkWriter final : public IWriter {
     copyFile(filePath, destinationPath.string());
   }
 
+ private:
+  std::filesystem::path _repositoryPath;
+  std::string _listeningPort;
+  std::list<std::string> _downloadedList;
 
+  std::condition_variable _cv;
+  std::unique_ptr<TransportLayer::TCPAcceptor> m_acceptor_ptr;
 };
 
 /// @brief Role of reader is just Client like. Read source and send data

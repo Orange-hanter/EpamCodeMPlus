@@ -6,33 +6,26 @@
 #define EPAMMIDDLE_TCPTRANSPORTLAYER_HPP
 
 #include <asio.hpp>
+#include <functional>
 
-#include <set>
-
-#include "iTransportLayer.hpp"
-#include "Downloader.hpp"
+#include "DlManager.hpp"
 
 namespace Clone::TransportLayer {
 
 using asio::ip::tcp;
 
-
-
-// crtp
-
 class TCPAcceptor {
 
   void start_accept()
   {
-    auto newSession = std::make_shared<Downloader>(_ioContext);
-    _DLManager.insert(newSession);
-    using error = std::placeholders::_1;
+    auto newSession = std::make_shared<Downloader>(_ioContext, _manager_ptr);
+    auto error = std::placeholders::_1;
     _acceptor->async_accept(newSession->socket(),
-        std::bind(&TCPAcceptor::handle_accept, this, error, newSession)
+        std::bind(&TCPAcceptor::handle_accept, this, error, std::move(newSession))
         );
   }
 
-  void handle_accept(const asio::error_code& error, const Downloader& new_connection,)
+  void handle_accept(const asio::error_code& error, Downloader_ptr new_connection)
   {
     // TODO: not shure that extra call won't harm performance
     if (!error) {
@@ -53,7 +46,7 @@ class TCPAcceptor {
  private:
   asio::io_context _ioContext;
   std::unique_ptr<tcp::acceptor> _acceptor;
-  std::set<std::shared_ptr<Downloader>> _DLManager;
+  DLManager _manager_ptr;
 };
 
 }  // namespace Clone::TransportLayer
