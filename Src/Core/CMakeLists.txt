@@ -21,9 +21,17 @@ set(LIB_HEADER_FILES
         Common/Utils.hpp
         Common/Configuration.hpp
         TransportLayer/TCPTransportLayer.hpp
-        TransportLayer/iTransportLayer.hpp)
+        TransportLayer/iTransportLayer.hpp
+        TransportLayer/Downloader.hpp 
+        TransportLayer/Connection.hpp
+)
 
-set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} TransportLayer/Downloader.hpp TransportLayer/Connection.hpp)
+set(PROTOBUF_SRC 
+                Messages/messages.pb.cc
+                Messages/messages.pb.h
+)
+
+set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} ${PROTOBUF_SRC})
 
 add_library(${TARGET} STATIC ${SOURCE_FILES})
 

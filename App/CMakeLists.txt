@@ -23,3 +23,10 @@ add_executable(ECHO_C  blocking_tcp_echo_client.cpp)
 target_link_libraries(ECHO_S PUBLIC asio::asio)
 target_link_libraries(AECHO_S PUBLIC asio::asio)
 target_link_libraries(ECHO_C PUBLIC asio::asio)
+
+
+
+add_executable(CHAT_C  chat_client.cpp chat_message.hpp)
+add_executable(CHAT_S  chat_server.cpp chat_message.hpp)
+target_link_libraries(CHAT_C PUBLIC asio::asio)
+target_link_libraries(CHAT_S PUBLIC asio::asio)
