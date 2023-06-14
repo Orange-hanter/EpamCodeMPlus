@@ -11,8 +11,10 @@ namespace Clone {
 
 class NetworkWorkerFactory : public AbstractWorkerFactory {
  public:
-  explicit NetworkWorkerFactory(std::string source)
-      : _source(std::move(source))
+  explicit NetworkWorkerFactory(std::string source, std::string ip, std::string port)
+      : _source(std::move(source)),
+        _adr(std::move(ip)),
+        _port(std::move(port))
   {
   }
 

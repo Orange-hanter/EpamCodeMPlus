@@ -7,6 +7,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <concepts>
 
 namespace fs = std::filesystem;
 
@@ -18,42 +19,46 @@ using asio::ip::tcp;
 
 #include "messages.pb.h"
 
-namespace Clone::TransportLayer {
+namespace Clone::TransportLayer
+{
 
 class DLManager;
 class Downloader;
 using Downloader_ptr = std::shared_ptr<Downloader>;
 
-class Downloader : public std::enable_shared_from_this<Downloader> {
-  void doReadNewRequest();
+template <typename T>
+concept ProtobufMessageDerived = std::derived_from<T, ::google::protobuf::Message>;
 
-  void requestValidation(Filetransfer::FileTransferRequest request);
+class Downloader : public std::enable_shared_from_this<Downloader>
+{
+    void doReadNewRequest();
 
-  void doReadFile();
+    void requestValidation(Filetransfer::FileTransferRequest* request);
 
- public:
-  explicit Downloader(asio::io_context ctx, DLManager& mngr,
-                      fs::path dfPath = "./tmp/")
-      : m_context(ctx),
-        m_socket(ctx),
-        m_dlManager(mngr),
-        m_defaultFilePath(std::move(dfPath))
-  {
-  }
+    void doReadFile();
 
-  void start();
+    template <ProtobufMessageDerived ProtobufMessage>
+    ProtobufMessage* parseProtobufMsg();
 
-  tcp::socket& socket() { return m_socket; }
+public:
+    explicit Downloader(asio::io_context& ctx, tcp::socket& socket, DLManager& mngr, fs::path dfPath = "./tmp/")
+        : m_context(ctx), m_socket(std::move(socket)), m_dlManager(mngr), m_defaultFilePath(std::move(dfPath))
+    {
+        std::cout << "Connection created" << &(*this) << '\n';
+    }
 
- private:
-  asio::io_context& m_context;
-  tcp::socket m_socket;
-  DLManager& m_dlManager;
-  enum {
-    max_length = 1024
-  };
-  char m_data[max_length]{};
-  fs::path m_defaultFilePath;
+    ~Downloader() { std::cout << "Connection closed" << &(*this) << '\n'; }
+
+    void start();
+
+    tcp::socket& socket() { return m_socket; }
+
+private:
+    asio::io_context& m_context;
+    tcp::socket m_socket;
+    DLManager& m_dlManager;
+    std::array<char, 1024> m_data{};
+    fs::path m_defaultFilePath;
 };
 
 }  // namespace Clone::TransportLayer

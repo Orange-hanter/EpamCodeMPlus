@@ -7,7 +7,13 @@
 #include "NetworkWorker.hpp"
 
 namespace Clone {
-Workers::IReader* NetworkWorkerFactory::CreateReader () { return new Workers::NetworkReader("127.0.0.1", "9080", "~/file"); }
+Workers::IReader* NetworkWorkerFactory::CreateReader()
+{
+  return new Workers::NetworkReader(_adr, _port, _source);
+}
 
-Workers::IWriter* NetworkWorkerFactory::CreateWriter () { return new Workers::NetworkWriter("~/.file_repo", "9080"); }
+Workers::IWriter* NetworkWorkerFactory::CreateWriter()
+{
+  return new Workers::NetworkWriter(_source, _port);
+}
 }  // namespace Clone
