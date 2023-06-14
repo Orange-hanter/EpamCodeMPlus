@@ -37,9 +37,9 @@ class StartupArgumentsParser {
         });
 
     _parser->add_argument("--ipc", "--mode")
-        .help("Turn on interprocess communication mode.")
-        .default_value<std::string>("BITESTREAM")
-        .implicit_value(std::string("IPC"));
+        .help("Turn on interprocess communication mode. It could be:\n BITESTREAM\n IPC\n NET\n")
+        .default_value<std::string>("BITESTREAM");
+        //.implicit_value(std::string("IPC"));
 
     _parser->add_argument("--client", "--role")
         .help(
