@@ -2,6 +2,12 @@ syntax = "proto3";
 
 package Filetransfer;
 
+enum ReturnCode {
+  DEFAULT = 0;
+  OK = 200;
+  ERROR = 400;
+}
+
 message FileTransferRequest {
   string file_name = 1;
   string md5_hash = 2;
@@ -14,6 +20,6 @@ message FileChunk {
 }
 
 message FileTransferResponse {
-  int32 return_code = 1;
+  ReturnCode return_code = 1;
   string error_message = 2;
 }

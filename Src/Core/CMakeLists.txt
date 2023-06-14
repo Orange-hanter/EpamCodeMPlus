@@ -1,9 +1,13 @@
 set(TARGET Clone.Core)
 set(FOLDER ${PROJECT_NAME})
 
+# Protobuf gen files
+add_subdirectory(Messages)
+
 set(LIB_SOURCE_FILES
         WorkerFactory.cpp
         Factories/NetworkWorkerFactory.cpp
+        TransportLayer/Downloader.cpp
 )
 
 set(LIB_HEADER_FILES
@@ -20,18 +24,20 @@ set(LIB_HEADER_FILES
         Common/IPCFrame.hpp
         Common/Utils.hpp
         Common/Configuration.hpp
-        TransportLayer/TCPTransportLayer.hpp
+        TransportLayer/TCPAcceptor.hpp
         TransportLayer/iTransportLayer.hpp
         TransportLayer/Downloader.hpp 
         TransportLayer/Connection.hpp
+        TransportLayer/DlManager.hpp
+        Factories/IPCWorkerFactory.hpp
+        Factories/IPCWorkerFactory.cpp
+        Factories/BytestreamWorkerFactory.cpp
+        Factories/BytestreamWorkerFactory.hpp
+        TransportLayer/Uploader.cpp
+        TransportLayer/Uploader.hpp
 )
 
-set(PROTOBUF_SRC 
-                Messages/messages.pb.cc
-                Messages/messages.pb.h
-)
-
-set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} ${PROTOBUF_SRC} TransportLayer/DlManager.hpp TransportLayer/Downloader.cpp)
+set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} )
 
 add_library(${TARGET} STATIC ${SOURCE_FILES})
 
@@ -43,4 +49,4 @@ target_include_directories(${TARGET} PUBLIC ./Common
                                             ./
 )
 
-target_link_libraries(${TARGET} PUBLIC asio::asio)
+target_link_libraries(${TARGET} PUBLIC asio::asio proto-objects)
