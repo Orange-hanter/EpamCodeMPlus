@@ -1,12 +1,11 @@
 #include "WorkerFactory.hpp"
 
-#include <cassert>
-#include <memory>
-#include <typeinfo>
 #include <utility>
 
 #include "Configuration.hpp"
 #include "NetworkWorkerFactory.hpp"
+#include "IPCWorkerFactory.hpp"
+#include "BytestreamWorkerFactory.hpp"
 #include "Utils.hpp"
 
 namespace Clone {
@@ -21,7 +20,7 @@ using Workers::IWriter;
 using Parser::CopyingMode;
 using Prop = Parser::CfgProperties;
 
-WorkerFactory::WorkerFactory(std::shared_ptr<Parser::Configuration> sp_cfg)
+WorkerFactory::WorkerFactory(std::shared_ptr<Parser::Configuration>& sp_cfg)
     : _config(std::move(sp_cfg))
 {
 }
@@ -29,7 +28,8 @@ WorkerFactory::WorkerFactory(std::shared_ptr<Parser::Configuration> sp_cfg)
 IWorker* WorkerFactory::getWorker()
 {
   auto factory = getFactory(_config->get_param<CopyingMode>(Prop::mode));
-  if (_config->get_param<std::string>(Prop::role) == "HOST")
+  auto cc = _config->get_param(Prop::role);
+  if (  cc == "HOST")
     return factory->CreateWriter();
   else
     return factory->CreateReader();
@@ -54,23 +54,4 @@ AbstractWorkerFactory* Clone::WorkerFactory::getFactory(CopyingMode mode)
   return nullptr;
 }
 
-//---------------------------------------------------------------------------------
-IReader* AbstractIPCFactory::CreateReader() { return new IPCReader(_source); }
-
-IWriter* AbstractIPCFactory::CreateWriter() { return new IPCWriter(_source); }
-
-IReader* BytestreamWorkerFactory::CreateReader()
-{
-  assert(("Shouldn't be run", false));
-  return nullptr;
-}
-
-IWriter* BytestreamWorkerFactory::CreateWriter()
-{
-  return new Workers::ByteStreamWriter(_source, _destination);
-}
-
-//------------------------------------------------------------------------------
-
-  
 }  // namespace Clone

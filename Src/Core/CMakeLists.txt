@@ -40,6 +40,7 @@ target_include_directories(${TARGET} PUBLIC ./Common
                                             ./Factories
                                             ./TransportLayer
                                             ./Messages
+                                            ./
 )
 
 target_link_libraries(${TARGET} PUBLIC asio::asio)

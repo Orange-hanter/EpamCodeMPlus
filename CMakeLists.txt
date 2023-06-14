@@ -33,11 +33,6 @@ if(ENABLE_CCACHE)
     include(Ccache)
 endif()
 
-# Protobuf
-if(ENABLE_PROTOBUF)
-    include(Protobuf)
-endif()
-
 add_subdirectory(Src)
 add_subdirectory(App)
 add_subdirectory(Test)
