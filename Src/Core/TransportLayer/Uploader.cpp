@@ -5,8 +5,8 @@
 #include "Uploader.hpp"
 
 #include <asio/connect.hpp>
-#include <asio/streambuf.hpp>
 #include <charconv>
+#include <fstream>
 #include <thread>
 #include <utility>
 
@@ -17,14 +17,13 @@ namespace Clone::TransportLayer
 
 void Uploader::doInitTransmission()
 {
-    Filetransfer::FileTransferRequest request;
+    Filetransfer::FileTransferRequest_t request;
     request.set_file_name("filename");
     request.set_file_size_kb(1234);
     request.set_md5_hash("asdasfcxvef");
 
 
-    std::string buf;
-    request.SerializeToArray();
+    std::string buf = request.SerializeAsString();
     auto bb = asio::buffer(buf, buf.size());
     asio::async_write(m_socket, bb, [this](std::error_code ec, std::size_t) {
         if (!ec) doReadResponse();
@@ -61,20 +60,48 @@ Uploader::~Uploader() { doCloseConnection(); }
 
 void Uploader::doReadResponse()
 {
-    asio::streambuf buf;
-    asio::async_read(m_socket, buf, [this, &buf](std::error_code ec, std::size_t received) {
+    asio::async_read(m_socket, sbuf, [this](std::error_code ec, std::size_t received) {
         if (!ec)
         {
-            std::istream out(&buf);
-            std::string str;
-            out >> str;
-            std::cout << str;
+            Filetransfer::FileTransferResponse_t rc;
+            {
+                std::istream out(&sbuf);
+                std::string str;
+                out >> str;
+                std::cout << str;
+            }
+            // TODO here should be parsing logic
+            switch (rc.return_code())
+            {
+                case Filetransfer::OK:
+                    doTransferFile();
+                    break;
+                case Filetransfer::ERROR:
+                    doReadResponse();
+                    break;
+                default:
+                    std::cerr << "Missed return code";
+
+            }
         }
         else
         {
             std::cout << asio::system_error(ec).what() << "\n>> " << std::endl;
         }
     });
+}
+
+void Uploader::doTransferFile() {
+
+    auto ifs = std::ifstream(m_FilePath, std::ios::binary);
+    std::uint32_t chunk_N{0};
+    while ( !ifs.eof() )
+    {
+       Filetransfer::FileChunk_t chunk;
+       chunk.mutable_data();
+       //ifs.readsome();
+
+    }
 }
 
 }  // namespace Clone::TransportLayer

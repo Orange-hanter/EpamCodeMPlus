@@ -22,6 +22,7 @@ namespace Clone::IPC
 
 class Frame
 {
+    static constexpr std::size_t m_chunk_size = 64;
 public:
     enum class STATE
     {
@@ -38,8 +39,8 @@ public:
     struct DataBulk
     {
         STATE _state{STATE::START};
-        size_t _sizeOfData{0};
-        byte _data_bulk[64];
+        std::size_t _sizeOfData{0};
+        byte _data_bulk[m_chunk_size]{0};
     };
 
     using T    = DataBulk;
@@ -140,14 +141,15 @@ public:
 
     friend std::basic_istream<byte>& operator>>(std::basic_istream<byte>& ifs, Frame& frame)
     {
-        ifs.read(frame._buf->_data_bulk, 64 - frame._buf->_sizeOfData);
+        // TODO look at moment with size of read memory, is it might be more than m_chunk_size
+        ifs.read(frame._buf->_data_bulk, m_chunk_size - frame._buf->_sizeOfData);
         frame._buf->_sizeOfData = static_cast<size_t>(ifs.gcount());
         return ifs;
     }
 
     friend std::basic_istream<byte>& operator>>(std::basic_istream<byte>& ifs, Frame* frame)
     {
-        ifs.read(frame->_buf->_data_bulk, 64 - frame->_buf->_sizeOfData);
+        ifs.read(frame->_buf->_data_bulk, m_chunk_size - frame->_buf->_sizeOfData);
         frame->_buf->_sizeOfData = static_cast<size_t>(ifs.gcount());
         return ifs;
     }
@@ -164,7 +166,6 @@ public:
         return ofs;
     }
 
-private:
     Frame(const Frame*)             = delete;
     Frame(Frame*)                   = delete;
     Frame& operator=(const Frame*)  = delete;
@@ -174,9 +175,9 @@ private:
 private:
     static inline const char szName[]    = {"Global\\MyFileMappingObject"};
     static const size_t defaultFrameSize = sizeof(DataBulk);
-    [[maybe_unused]] HANDLE hMapFile;
-    std::terminate_handler _old_handler;
+    [[maybe_unused]] HANDLE hMapFile{};
+    std::terminate_handler _old_handler{};
     std::mutex _m;
-    TRef _buf;
+    TRef _buf{};
 };
 }  // namespace Clone::IPC

@@ -8,18 +8,22 @@ enum ReturnCode {
   ERROR = 400;
 }
 
-message FileTransferRequest {
+message Message_size_t {
+  fixed32 m_size = 1;
+}
+
+message FileTransferRequest_t {
   string file_name = 1;
   string md5_hash = 2;
   uint64 file_size_kb = 3;
 }
 
-message FileChunk {
+message FileChunk_t {
   uint32 sequence_num = 1;
   bytes data = 2;
 }
 
-message FileTransferResponse {
+message FileTransferResponse_t {
   ReturnCode return_code = 1;
   string error_message = 2;
 }

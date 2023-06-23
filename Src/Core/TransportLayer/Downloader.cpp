@@ -4,9 +4,10 @@
 
 #include "Downloader.hpp"
 
-#include <fstream>
 #include <asio/error_code.hpp>
 #include <asio/streambuf.hpp>
+#include <fstream>
+
 #include "DlManager.hpp"
 
 namespace Clone::TransportLayer
@@ -17,32 +18,35 @@ void Downloader::doReadNewRequest()
     // TODO: replace by protobuf message TransferRequest
     auto self = (shared_from_this());
     asio::streambuf buf;
-    asio::async_read(self->socket(), asio::buffer(m_data, 5), [self](std::error_code ec, std::size_t length) {
+    asio::async_read(
+        self->socket(), asio::buffer(m_data, 10),
+        [](const std::error_code& ec, std::size_t size) {
+            std::cout << size << std::endl;
+            return 5 - size;
+        },
+        [self](std::error_code ec, std::size_t length) {
+            // TODO: lets imagine TransferRequest was read
+            if (!ec)
+            {
+                {  // DEBUG CODE
+                    for (auto c : self->m_data) std::cout << c;
+                    // DEBUG CODE
+                }
+                auto request = self->parseProtobufMsg<Filetransfer::FileTransferRequest_t>();
+                if (request) self->requestValidation(request);
+                std::cerr << "ERROR: File wasn't received\n";
+                self->doReadNewRequest();
+            }
+            else
+            {
+                std::cout << asio::system_error(ec).what() << "\n>> " << self->m_data.data() << std::endl;
 
-        // TODO: lets imagine TransferRequest was read
-        if (!ec)
-        {
-            for(auto c : self->m_data)
-                std::cout << c;
-            auto request = self->parseProtobufMsg<Filetransfer::FileTransferRequest>();
-            if (request)
-                self->requestValidation(request);
-            std::cerr << "ERROR: File wasn't received\n";
-            self->doReadNewRequest();
-        }
-        else
-        {
-            std::cout << asio::system_error(ec).what()
-                      << "\n>> "
-                      << self->m_data.data()
-                      << std::endl;
-
-            self->m_dlManager.stopSession(self);
-        }
-    });
+                self->m_dlManager.stopSession(self);
+            }
+        });
 }
 
-void Downloader::requestValidation(Filetransfer::FileTransferRequest* request)
+void Downloader::requestValidation(Filetransfer::FileTransferRequest_t* request)
 {
     auto name              = request->file_name();
     fs::path tmp_file_path = m_defaultFilePath.string() + '/' + name;
@@ -52,14 +56,14 @@ void Downloader::requestValidation(Filetransfer::FileTransferRequest* request)
      * */
     delete request;
 
-    Filetransfer::FileTransferResponse response;
+    Filetransfer::FileTransferResponse_t response;
     response.set_error_message("");
     response.set_return_code(Filetransfer::ReturnCode::OK);
 
     std::string buf;
     response.SerializeToString(&buf);
     auto bb = asio::buffer(buf, buf.size());
-    asio::async_write(m_socket, bb, [](std::error_code, std::size_t){});
+    asio::async_write(m_socket, bb, [](std::error_code, std::size_t) {});
 }
 
 std::string genTempFileName(const std::string& fileName)
@@ -100,11 +104,12 @@ void Downloader::start()
 }
 
 template <ProtobufMessageDerived ProtobufMessage>
-ProtobufMessage*  Downloader::parseProtobufMsg()
+ProtobufMessage* Downloader::parseProtobufMsg()
 {
     auto msg_p = new ProtobufMessage();
-    if (msg_p->ParseFromArray(m_data.data(), m_data.size())){
-        return  msg_p;
+    if (msg_p->ParseFromArray(m_data.data(), m_data.size()))
+    {
+        return msg_p;
     }
     return {nullptr};
 }

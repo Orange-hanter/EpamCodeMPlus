@@ -28,7 +28,7 @@ class Frame {
 
   ~Frame()
   {
-    if (_buf != nullptr) delete[] _buf;
+    delete[] _buf;
   }
 
   Frame& operator=(Frame&& other) noexcept
@@ -59,6 +59,8 @@ class Frame {
 
   friend std::istream& operator>>(std::istream& ifs, Frame* frame)
   {
+    assert(frame != nullptr);
+
     ifs.read(frame->_buf, frame->_frameSize);
     frame->_frameSize = static_cast<size_t>(ifs.gcount());
     return ifs;
@@ -66,10 +68,10 @@ class Frame {
 
   T* data() const { return _buf; }
 
-  size_t frameSize() const { return _frameSize; };
+  [[nodiscard]] std::size_t frameSize() const { return _frameSize; };
 
  private:
-  size_t _frameSize;
+  std::size_t _frameSize;
   T* _buf;
 
   static const size_t defaultFrameSize = 64;

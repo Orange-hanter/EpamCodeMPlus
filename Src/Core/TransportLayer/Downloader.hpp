@@ -33,7 +33,7 @@ class Downloader : public std::enable_shared_from_this<Downloader>
 {
     void doReadNewRequest();
 
-    void requestValidation(Filetransfer::FileTransferRequest* request);
+    void requestValidation(Filetransfer::FileTransferRequest_t* request);
 
     void doReadFile();
 
