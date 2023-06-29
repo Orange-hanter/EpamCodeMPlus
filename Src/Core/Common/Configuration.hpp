@@ -22,6 +22,7 @@ struct CfgProperties
     static inline const char* frame       = "frame";
     static inline const char* mode        = "ipc";
     static inline const char* role        = "role";
+    static inline const char* port        = "port";
 };
 
 inline namespace Internal

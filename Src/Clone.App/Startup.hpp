@@ -41,6 +41,10 @@ class StartupArgumentsParser {
         .default_value<std::string>("BITESTREAM");
         //.implicit_value(std::string("IPC"));
 
+    _parser->add_argument("-p", "--port")
+        .help("Destination port")
+        .default_value<std::string>("7707");
+
     _parser->add_argument("--client", "--role")
         .help(
             "Work only with --ipc mode. Take role of host, and fill shared "
@@ -76,6 +80,7 @@ class StartupArgumentsParser {
     set(CfgProperties::frame);
     set(CfgProperties::role);
     set(CfgProperties::mode);
+    set(CfgProperties::port);
 
     return _config;
   }
