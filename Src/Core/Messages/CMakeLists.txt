@@ -1,7 +1,7 @@
 set(TARGET proto-objects)
 
 set(PROTO_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
-set(PROTO_FILES ./messages.proto)
+set(PROTO_FILES ./messages.proto MessageUtils.hpp)
 
 
 add_library(${TARGET} OBJECT ${PROTO_FILES})
