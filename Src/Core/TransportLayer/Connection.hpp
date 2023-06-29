@@ -28,7 +28,7 @@ class tcp_connection : public std::enable_shared_from_this<tcp_connection> {
   {
     auto error_ph = std::placeholders::_1;
     auto bytes_transferred_ph = std::placeholders::_2;
-    // TODO: after start here should be somesing like reading file and sendint
+    // TODO: after start here should be something like reading file and sending
     asio::async_write(
         socket_, asio::buffer(message_),
         std::bind(&tcp_connection::handle_write, shared_from_this(), error_ph,

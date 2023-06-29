@@ -7,7 +7,6 @@
 
 #include <filesystem>
 #include <memory>
-#include <concepts>
 
 namespace fs = std::filesystem;
 
@@ -26,28 +25,27 @@ class DLManager;
 class Downloader;
 using Downloader_ptr = std::shared_ptr<Downloader>;
 
-template <typename T>
-concept ProtobufMessageDerived = std::derived_from<T, ::google::protobuf::Message>;
-
 class Downloader : public std::enable_shared_from_this<Downloader>
 {
     void doReadNewRequest();
 
-    void requestValidation(Filetransfer::FileTransferRequest_t* request);
+    void requestValidation(const Filetransfer::FileTransferRequest_t* request);
 
-    void doReadFile();
+    void doDownload();
 
-    template <ProtobufMessageDerived ProtobufMessage>
-    ProtobufMessage* parseProtobufMsg();
+    void doWrite(const google::protobuf::MessageLite* request, void (Downloader::*handler)());
+    void doWrite(const google::protobuf::MessageLite* request);
+
+    template <typename Handler_t>
+    void doRead(Handler_t handler);
+
+    template <typename Handler_t>
+    void doReadS(Handler_t handler);
 
 public:
-    explicit Downloader(asio::io_context& ctx, tcp::socket& socket, DLManager& mngr, fs::path dfPath = "./tmp/")
-        : m_context(ctx), m_socket(std::move(socket)), m_dlManager(mngr), m_defaultFilePath(std::move(dfPath))
-    {
-        std::cout << "Connection created" << &(*this) << '\n';
-    }
+    Downloader(asio::io_context& ctx, tcp::socket& socket, DLManager& mngr, fs::path dfPath = "./tmp/");
 
-    ~Downloader() { std::cout << "Connection closed" << &(*this) << '\n'; }
+    ~Downloader();
 
     void start();
 
@@ -57,7 +55,7 @@ private:
     asio::io_context& m_context;
     tcp::socket m_socket;
     DLManager& m_dlManager;
-    std::array<char, 1024> m_data{};
+    std::array<char, 4086> m_data{};
     fs::path m_defaultFilePath;
 };
 

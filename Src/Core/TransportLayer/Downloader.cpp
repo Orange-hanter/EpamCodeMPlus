@@ -4,114 +4,166 @@
 
 #include "Downloader.hpp"
 
-#include <asio/error_code.hpp>
 #include <asio/streambuf.hpp>
 #include <fstream>
+#include <future>
+#include <source_location>
 
 #include "DlManager.hpp"
+#include "MessageUtils.hpp"
+#include "Utils.hpp"
 
 namespace Clone::TransportLayer
 {
 
 void Downloader::doReadNewRequest()
 {
-    // TODO: replace by protobuf message TransferRequest
     auto self = (shared_from_this());
-    asio::streambuf buf;
-    asio::async_read(
-        self->socket(), asio::buffer(m_data, 10),
-        [](const std::error_code& ec, std::size_t size) {
-            std::cout << size << std::endl;
-            return 5 - size;
-        },
-        [self](std::error_code ec, std::size_t length) {
-            // TODO: lets imagine TransferRequest was read
-            if (!ec)
-            {
-                {  // DEBUG CODE
-                    for (auto c : self->m_data) std::cout << c;
-                    // DEBUG CODE
-                }
-                auto request = self->parseProtobufMsg<Filetransfer::FileTransferRequest_t>();
-                if (request) self->requestValidation(request);
-                std::cerr << "ERROR: File wasn't received\n";
-                self->doReadNewRequest();
-            }
-            else
-            {
-                std::cout << asio::system_error(ec).what() << "\n>> " << self->m_data.data() << std::endl;
+    doRead([self]() {
+        auto request = Utils::parseProtobufMsg<Filetransfer::FileTransferRequest_t, decltype(self->m_data)>(self->m_data);
 
-                self->m_dlManager.stopSession(self);
-            }
-        });
+        if (request)
+            self->requestValidation(request.get());
+        else
+        {
+            std::cerr << "ERROR: File wasn't received correctly\n";
+            return;  // ToDo close connection??
+        }
+    });
+
 }
 
-void Downloader::requestValidation(Filetransfer::FileTransferRequest_t* request)
+void Downloader::requestValidation(const Filetransfer::FileTransferRequest_t* request)
 {
     auto name              = request->file_name();
-    fs::path tmp_file_path = m_defaultFilePath.string() + '/' + name;
+    fs::path tmp_file_path = m_defaultFilePath.append(name);  // TODO check if file already exist
     /*TODO:
      * 1. make new promise from request data
      * 2. send request for
      * */
-    delete request;
 
     Filetransfer::FileTransferResponse_t response;
-    response.set_error_message("");
     response.set_return_code(Filetransfer::ReturnCode::OK);
 
-    std::string buf;
-    response.SerializeToString(&buf);
-    auto bb = asio::buffer(buf, buf.size());
-    asio::async_write(m_socket, bb, [](std::error_code, std::size_t) {});
+    doWrite(&response, &Downloader::doDownload);
 }
 
-std::string genTempFileName(const std::string& fileName)
+void Downloader::doDownload()
 {
-    auto now  = std::chrono::system_clock::now();
-    auto time = std::chrono::system_clock::to_time_t(now);
+    std::map<int, std::string> memory{};
+    auto self = shared_from_this();
 
-    std::stringstream ss;
-
-    ss << std::put_time(std::localtime(&time), "%Y%m%d%H%M%S");
-
-    auto millisec = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
-
-    ss << millisec.count();
-    ss << "_" << fileName;
-    return ss.str();
-}
-
-std::string calculateHash(const std::string& filePath)
-{
-    std::ifstream file(filePath, std::ios::binary);
-    if (!file)
+    while (true)
     {
-        return "";
-    }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-
-    std::hash<std::string> hasher;
-    return std::to_string(hasher(buffer.str()));
+        m_data.fill(0);
+        doReadS([self, &memory]() {
+            auto request = Utils::parseProtobufMsg<Filetransfer::FileChunk_t, decltype(self->m_data)>(self->m_data);
+            if (!request) { std::cout << "Auch"; return ;}
+            memory.emplace(request->sequence_num(), request->data());
+            std::cout << memory.size() << '\n';
+            //TODO merge file from parts
+        });
+    };
 }
+
+void Downloader::doWrite(const google::protobuf::MessageLite* request, void (Downloader::*handler)())
+{
+    auto buf = Utils::MessageToVector(*request);
+    asio::async_write(m_socket, asio::buffer(*buf, buf->size()), [this, handler](std::error_code ec, std::size_t) {
+        if (!ec) (this->*handler)();
+    });
+}
+
+void Downloader::doWrite(const google::protobuf::MessageLite* request)
+{
+    auto buf = Utils::MessageToVector(*request);
+    asio::async_write(m_socket, asio::buffer(*buf, buf->size()), [](std::error_code ec, std::size_t) {
+        if (ec) std::cerr << std::source_location::current().line() << ": " << ec;
+    });
+}
+
+template <typename Handler_t>
+void Downloader::doRead(Handler_t handler)
+{
+    auto self = (shared_from_this());
+    asio::async_read(
+        self->socket(), asio::buffer(m_data),
+        [self](const std::error_code& ec, std::size_t received) {
+            auto header_size{sizeof(std::uint32_t) + sizeof(std::uint64_t)};
+
+            if (received < header_size) return header_size;
+
+            std::uint32_t start{*reinterpret_cast<std::uint32_t*>(self->m_data.data())};
+            if (start == Utils::start_dword)
+            {
+                auto message_size   = *reinterpret_cast<std::uint64_t*>(self->m_data.data() + sizeof(std::uint32_t));
+                auto estimated_size = header_size + message_size + sizeof(Utils::end_dword);
+                std::uint32_t end{*reinterpret_cast<std::uint32_t*>(self->m_data.data() + estimated_size - sizeof(Utils::end_dword))};
+                if (end == Utils::end_dword) return 0UL;
+
+                return estimated_size;
+            }
+
+            return 0UL;
+        },
+        [self, handler](std::error_code ec, std::size_t length) {
+            if (!ec)
+                handler();
+            else if (ec == asio::error::eof)
+            {
+                ;  // end of connection
+            }
+        });
+}
+
+template <typename Handler_t>
+void Downloader::doReadS(Handler_t handler)
+{
+    auto self = (shared_from_this());
+    std::error_code ec{};
+    asio::read(
+        self->socket(), asio::buffer(m_data),
+        [self](const std::error_code& ec, std::size_t received) {
+            auto header_size{sizeof(std::uint32_t) + sizeof(std::uint64_t)};
+
+            if (received < header_size) return header_size;
+
+            std::uint32_t start{*reinterpret_cast<std::uint32_t*>(self->m_data.data())};
+            if (start == Utils::start_dword)
+            {
+                auto message_size   = *reinterpret_cast<std::uint64_t*>(self->m_data.data() + sizeof(std::uint32_t));
+                auto estimated_size = message_size + sizeof(Utils::end_dword);
+                auto end_ptr_shift = header_size + message_size;
+                std::uint32_t end{*reinterpret_cast<std::uint32_t*>(self->m_data.data() + end_ptr_shift)};
+                if (end == Utils::end_dword) return 0UL;
+
+                return estimated_size;
+            }
+            std::cout << "Error reading\n" << self->m_data.data() << std::endl;
+            return 0UL;
+        },
+        ec);
+
+    if (!ec)
+        handler();
+    else if (ec == asio::error::eof)
+    {
+        ;  // end of connection
+    }
+}
+
+Downloader::Downloader(asio::io_context& ctx, tcp::socket& socket, DLManager& mngr, fs::path dfPath)
+    : m_context(ctx), m_socket(std::move(socket)), m_dlManager(mngr), m_defaultFilePath(std::move(dfPath))
+{
+    std::cout << "Connection created" << &(*this) << '\n';
+}
+
+Downloader::~Downloader() { std::cout << "Connection closed" << &(*this) << '\n'; }
 
 void Downloader::start()
 {
     m_dlManager.registerSession(shared_from_this());
     doReadNewRequest();
-}
-
-template <ProtobufMessageDerived ProtobufMessage>
-ProtobufMessage* Downloader::parseProtobufMsg()
-{
-    auto msg_p = new ProtobufMessage();
-    if (msg_p->ParseFromArray(m_data.data(), m_data.size()))
-    {
-        return msg_p;
-    }
-    return {nullptr};
 }
 
 }  // namespace Clone::TransportLayer
