@@ -13,7 +13,7 @@ namespace Clone
 
   Workers::IReader* BytestreamWorkerFactory::CreateReader()
   {
-    assert(("Shouldn't be run", false));
+    assert(((void)"Shouldn't be run", false));
     return nullptr;
   }
 

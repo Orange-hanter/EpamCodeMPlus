@@ -46,8 +46,9 @@ AbstractWorkerFactory* Clone::WorkerFactory::getFactory(CopyingMode mode)
       return new AbstractIPCFactory(_config->get_param<std::string>(Prop::source));
 
     case CopyingMode::NetworkSharing:
-      //return new NetworkWorkerFactory(_config->get_param<std::string>(Prop::source));
-      return new NetworkWorkerFactory("~/.sharedRepository", "127.0.0.1", "7707");
+      return new NetworkWorkerFactory(_config->get_param<std::string>(Prop::source),
+                                      _config->get_param<std::string>(Prop::destination),
+                                      _config->get_param<std::string>(Prop::port));
 
     default:
       break;

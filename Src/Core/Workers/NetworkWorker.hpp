@@ -116,26 +116,24 @@ class NetworkReader final : public IReader
 {
 public:
     NetworkReader(std::string serverAddress, std::string serverPort, const std::string& filePath)
-        : _filePath(filePath), _serverAddress(std::move(serverAddress)), _serverPort(std::move(serverPort))
-    {
-        _uploader = new TransportLayer::Uploader(_serverAddress, _serverPort, ::fs::path(filePath));
-    }
+        : _filePath(filePath), _serverAddress(std::move(serverAddress)), _serverPort(std::move(serverPort)),
+          _uploaderPtr(std::make_shared<TransportLayer::Uploader>(_serverAddress, _serverPort, ::fs::path(filePath)))
+    {}
 
     int execute() override
     {
-        _uploader->doConnect();
+        _uploaderPtr->doConnect();
         return 0;
     };
 
-    bool isDone() override { return _done; };
+    bool isDone() override { return !_uploaderPtr->isConnected(); };
 
 private:
-    bool _done{false};
     const std::size_t _packageSize{4096};
     std::filesystem::path _filePath;
     std::string _serverPort;
     std::string _serverAddress;
-    TransportLayer::Uploader* _uploader{nullptr};
+    std::shared_ptr<TransportLayer::Uploader>  _uploaderPtr;
 };
 
 }  // namespace Clone::Workers

@@ -25,8 +25,7 @@ set(LIB_HEADER_FILES
         Common/Utils.hpp
         Common/Configuration.hpp
         TransportLayer/TCPAcceptor.hpp
-        TransportLayer/iTransportLayer.hpp
-        TransportLayer/Downloader.hpp 
+        TransportLayer/Downloader.hpp
         TransportLayer/Connection.hpp
         TransportLayer/DlManager.hpp
         Factories/IPCWorkerFactory.hpp
