@@ -19,16 +19,8 @@ class IWorker {
   virtual ~IWorker() = default;
 };
 
-class IReader : public IWorker {
- public:
-  ~IReader() override = default;
-  IReader() = default;
-};
+using IReader = IWorker;
+using IWriter = IWorker;
 
-class IWriter : public IWorker {
- public:
-  ~IWriter() override = default;
-  IWriter() = default;
-};
 
 }  // namespace Clone::Workers
