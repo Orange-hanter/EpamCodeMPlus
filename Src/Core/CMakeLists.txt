@@ -48,4 +48,4 @@ target_include_directories(${TARGET} PUBLIC ./Common
                                             ./
 )
 
-target_link_libraries(${TARGET} PUBLIC asio::asio proto-objects)
+target_link_libraries(${TARGET} PUBLIC asio::asio proto-objects Boost::log_setup Boost::log)

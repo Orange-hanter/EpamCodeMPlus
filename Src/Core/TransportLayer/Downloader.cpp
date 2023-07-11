@@ -5,9 +5,8 @@
 #include "Downloader.hpp"
 
 #include <asio/streambuf.hpp>
+#include <boost/log/trivial.hpp>
 #include <fstream>
-#include <future>
-#include <source_location>
 
 #include "DlManager.hpp"
 #include "MessageUtils.hpp"
@@ -15,18 +14,23 @@
 
 namespace Clone::TransportLayer
 {
+namespace logging = boost::log;
 
 void Downloader::doReadNewRequest()
 {
     auto self = (shared_from_this());
     doRead([self]() {
-        auto request = Utils::parseProtobufMsg<Filetransfer::FileTransferRequest_t, decltype(self->m_data)>(self->m_data);
+        self->m_candidate = Utils::packageToMessage<Filetransfer::FileTransferRequest_t, decltype(self->m_data)>(self->m_data);
+        if (self->m_candidate)
+        {
+            BOOST_LOG_TRIVIAL(info) << "New candidate " << self->m_candidate->file_name() << ' ' << self->m_candidate->file_size_kb();
+            BOOST_LOG_TRIVIAL(info) << "Downloading file...";
 
         if (request)
             self->requestValidation(request.get());
         else
         {
-            std::cerr << "ERROR: File wasn't received correctly\n";
+            BOOST_LOG_TRIVIAL(error) << "ERROR: File wasn't received correctly";
             return;  // ToDo close connection??
         }
     });
@@ -53,18 +57,46 @@ void Downloader::doDownload()
     std::map<int, std::string> memory{};
     auto self = shared_from_this();
 
-    while (true)
-    {
-        m_data.fill(0);
-        doReadS([self, &memory]() {
-            auto request = Utils::parseProtobufMsg<Filetransfer::FileChunk_t, decltype(self->m_data)>(self->m_data);
-            if (!request) { std::cout << "Auch"; return ;}
-            memory.emplace(request->sequence_num(), request->data());
-            std::cout << memory.size() << '\n';
-            //TODO merge file from parts
-        });
-    };
+    doRead([self]() {
+        BOOST_LOG_TRIVIAL(trace) << "Package processing";
+        auto request = Utils::packageToMessage<Filetransfer::FileChunk_t, decltype(self->m_data)>(self->m_data);
+        if (!request) throw std::logic_error("Damaged package was received");
+
+        auto frame_id = request->sequence_num();
+        if (frame_id == -1)
+        {
+            BOOST_LOG_TRIVIAL(trace) << "Package EOF granted";
+
+            self->sendResponse(Filetransfer::RECEIVED, "RE");
+            self->m_context.post(std::bind(&Downloader::assembleFile, self));
+            return;
+        }
+        self->memory.emplace(frame_id, request->data());
+
+        BOOST_LOG_TRIVIAL(trace) << "Got frame: " << frame_id << " " << request->data().size() << " byte";
+        self->m_context.dispatch(std::bind(&Downloader::doDownload, self));
+    });
 }
+
+void Downloader::assembleFile()
+{
+    auto self              = shared_from_this();
+    auto tmpName           = Utils::genTempFileName(m_candidate->file_name());
+    fs::path tmp_file_path = m_defaultFilePath.append(tmpName);  // TODO check if file already exist
+    {
+        std::ofstream ofs(tmp_file_path, std::ios::binary);
+        for (auto&& pair : this->memory)
+        {
+            ofs.write(pair.second.c_str(), pair.second.size());
+        }
+    }
+    auto hash = Utils::calculateHash(tmp_file_path);
+    if (hash == m_candidate->md5_hash())  // todo when uploader send file, at the end it add extra zeros, because of that hash didn't match
+    {
+        BOOST_LOG_TRIVIAL(info) << "Received file hash: " << hash << " ==" << m_candidate->md5_hash();
+    }
+    else
+        BOOST_LOG_TRIVIAL(error) << "Received file hash: " << hash << " not equal " << m_candidate->md5_hash();
 
 void Downloader::doWrite(const google::protobuf::MessageLite* request, void (Downloader::*handler)())
 {

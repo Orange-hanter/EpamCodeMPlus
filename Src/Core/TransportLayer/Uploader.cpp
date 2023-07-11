@@ -6,15 +6,18 @@
 
 #include <asio/connect.hpp>
 #include <asio/signal_set.hpp>
+#include <boost/log/trivial.hpp>
 #include <charconv>
 #include <fstream>
-#include <source_location>
 #include <thread>
 #include <utility>
 
 #include "Common/Utils.hpp"
 #include "MessageUtils.hpp"
 #include "messages.pb.h"
+
+namespace logging = boost::log;
+using namespace std::chrono_literals;
 
 namespace Clone::TransportLayer
 {
@@ -31,9 +34,9 @@ void Uploader::doConnect()
 {
     m_connectionState = ConnectionState::WAIT_CONNECTION;
     asio::async_connect(m_socket, m_endpoint, [this](const std::error_code& ec, const tcp::endpoint& ep) {
-        std::cout << ep << '\n';  // TODO clear that
         if (!ec)
         {
+            BOOST_LOG_TRIVIAL(info) << "Connection establish";
             m_connectionState = ConnectionState::CONNECTED;
             doInitTransmission();
         }
@@ -41,7 +44,10 @@ void Uploader::doConnect()
     std::thread([this]() {
         // TODO not sure that this is good idea
         asio::signal_set signals(m_context, SIGINT, SIGTERM);
-        signals.async_wait([&](auto, auto) { std::cout << "TERMINATE"; m_context.stop(); });
+        signals.async_wait([&](auto, auto) {
+            BOOST_LOG_TRIVIAL(info) << "Termination session after external signal";
+            m_context.stop();
+        });
         m_context.run();
     }).detach();
 }
@@ -50,6 +56,7 @@ bool Uploader::isConnected() const { return m_connectionState & (ConnectionState
 
 void Uploader::doCloseSession()
 {
+    BOOST_LOG_TRIVIAL(info) << "Normally closing session";
     asio::post(m_context, [this]() { m_socket.close(); });
     m_context.stop();
     m_connectionState = ConnectionState::CLOSED;
@@ -59,6 +66,7 @@ Uploader::~Uploader() { doCloseSession(); }
 
 void Uploader::doInitTransmission()
 {
+    BOOST_LOG_TRIVIAL(info) << "Init transmission";
     Filetransfer::FileTransferRequest_t request;
     request.set_file_name(m_FilePath.filename().string());
     request.set_file_size_kb(std::filesystem::file_size(m_FilePath));
@@ -69,28 +77,45 @@ void Uploader::doInitTransmission()
 
 void Uploader::doReadResponse()
 {
-    doRead([this]() {
-        auto rc = Utils::parseProtobufMsg<Filetransfer::FileTransferResponse_t, decltype(this->m_data)>(m_data);
+    BOOST_LOG_TRIVIAL(trace) << "Wait response...";
+    auto self = shared_from_this();
+    doRead([self]() {
+        auto rc = Utils::packageToMessage<Filetransfer::FileTransferResponse_t, decltype(self->m_data)>(self->m_data);
         switch (rc->return_code())
         {
             case Filetransfer::OK:
-                doTransferFile();
+                BOOST_LOG_TRIVIAL(info) << "New response: OK";
+                self->m_context.dispatch(std::bind(&Uploader::doTransferFile, self));
                 break;
-            case Filetransfer::ERROR:
-                std::cerr << rc->error_message() << std::endl;
-                doCloseSession();
+            case Filetransfer::RECEIVED:
+                BOOST_LOG_TRIVIAL(info) << "New response: RECEIVED";
+                self->doCloseSession();
                 return;
-                //TODO add response RECEIVED
+            case Filetransfer::ERROR:
+                BOOST_LOG_TRIVIAL(info) << "New response: \"ERROR " << rc->error_message() << "\"";
+                self->doCloseSession();
+                return;
+
             default:
-                std::cerr << "Missed return code\n";
+                BOOST_LOG_TRIVIAL(error) << "Response are not defined";
         }
     });
 }
 
 void Uploader::doTransferFile()
 {
-    // TODO complete
-    auto ifs = std::ifstream(m_FilePath, std::ios::binary);
+    BOOST_LOG_TRIVIAL(trace) << "Star transferring";
+
+    auto self = shared_from_this();
+
+    auto ifs  = std::ifstream(m_FilePath, std::ios::binary);
+    if (!ifs)
+    {
+        BOOST_LOG_TRIVIAL(error) << "File didn't open";
+        doCloseSession();
+        return;
+    }
+
     static std::uint32_t chunk_N{0};
     while (!ifs.eof())
     {
@@ -101,11 +126,16 @@ void Uploader::doTransferFile()
 
         ifs.read(buf.data(), buf.size());
 
-        chunk->set_data(buf.data(), buf.size());
-        chunk->set_sequence_num(chunk_N++);
+        BOOST_LOG_TRIVIAL(info) << "Send package " << chunk->sequence_num() << " " << chunk->data().size() << " byte";
 
-        doWrite(chunk.get());
+        doWrite(chunk.get());  // TODO potential memory leak! (by the way, not. But better to check with Valgrind
     }
+
+    BOOST_LOG_TRIVIAL(trace) << "Send EOF flag";
+    auto chunk = std::make_shared<Filetransfer::FileChunk_t>();
+    chunk->set_sequence_num(-1);
+    doWrite(chunk.get());
+    self->m_context.dispatch(std::bind(&Uploader::doReadResponse, self));
 }
 
 void Uploader::doWrite(const google::protobuf::MessageLite* request, void (Uploader::*handler)())
@@ -117,7 +147,7 @@ void Uploader::doWrite(const google::protobuf::MessageLite* request, void (Uploa
             (this->*handler)();
         }
         else
-            std::cerr << std::source_location::current().line() << ": " << asio::system_error(ec).what() << "\n>> " << std::endl;
+            BOOST_LOG_TRIVIAL(error) << "Writing problem: " << asio::system_error(ec).what();
     });
 }
 
@@ -125,7 +155,7 @@ void Uploader::doWrite(const google::protobuf::MessageLite* request)
 {
     auto buf = Utils::MessageToVector(*request);
     asio::async_write(m_socket, asio::buffer(*buf, buf->size()), [buf](std::error_code ec, std::size_t) {
-        if (ec) std::cerr << std::source_location::current().line() << ": " << asio::system_error(ec).what() << "\n>> " << std::endl;
+        if (ec) BOOST_LOG_TRIVIAL(error) << "Writing problem: " << asio::system_error(ec).what();
     });
 }
 
@@ -143,22 +173,20 @@ void Uploader::doRead(Handler_t handler)
             std::uint32_t start{*reinterpret_cast<std::uint32_t*>(self->m_data.data())};
             if (start == Utils::start_dword)
             {
-                auto message_size   = *reinterpret_cast<std::uint64_t*>(self->m_data.data() + sizeof(std::uint32_t));
-                auto estimated_size = message_size + sizeof(Utils::end_dword);
-                auto end_ptr_shift = header_size + message_size;
-                std::uint32_t end{*reinterpret_cast<std::uint32_t*>(self->m_data.data() + end_ptr_shift)};
-                if (end == Utils::end_dword) return 0UL;
-
-                return estimated_size;
+                if (ec == asio::error::eof)
+                {
+                    self->doCloseSession();
+                    return 0UL;
+                }
+                BOOST_LOG_TRIVIAL(error) << "Reading problem: " << asio::system_error(ec).what();
             }
-            std::cout << "Error reading\n" << self->m_data.data() << std::endl;
-            return 0UL;
+            return Utils::receiverAlgorithm(self->m_data.begin(), received);
         },
         [self, handler](std::error_code ec, std::size_t length) {
             if (!ec)
                 handler();
             else
-                std::cerr << asio::system_error(ec).what() << "\n>> " << std::endl;
+                BOOST_LOG_TRIVIAL(error) << "Reading problem: " << asio::system_error(ec).what();
         });
 }
 
