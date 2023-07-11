@@ -9,26 +9,27 @@
 
 #include "AbstractWorkerFactory.hpp"
 
-namespace Clone{
+namespace Clone
+{
 
-class BytestreamWorkerFactory : public AbstractWorkerFactory {
- public:
-  explicit BytestreamWorkerFactory(std::string source, std::string destination)
-      : _source(std::move(source)), _destination(std::move(destination))
-  {
-  }
+class BytestreamWorkerFactory : public AbstractWorkerFactory
+{
+public:
+    explicit BytestreamWorkerFactory(std::string source, std::string destination)
+        : _source(std::move(source)), _destination(std::move(destination))
+    {
+    }
 
-  BytestreamWorkerFactory() = delete;
+    BytestreamWorkerFactory() = delete;
 
+    Clone::Workers::IWriter* CreateWriter() override;
 
-  Clone::Workers::IWriter* CreateWriter() override;
-
- private:
-  Clone::Workers::IReader* CreateReader() override;
-  std::string _source;
-  std::string _destination;
+private:
+    Clone::Workers::IReader* CreateReader() override;  // hided because mode didn't support client mode
+    std::string _source;
+    std::string _destination;
 };
 
-}
+}  // namespace Clone
 
 #endif  // EPAMMIDDLE_BYTESTREAMWORKERFACTORY_HPP
