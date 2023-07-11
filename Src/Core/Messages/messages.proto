@@ -20,7 +20,7 @@ message FileTransferRequest_t {
 }
 
 message FileChunk_t {
-  uint32 sequence_num = 1;
+  int32 sequence_num = 1;
   bytes data = 2;
 }
 
