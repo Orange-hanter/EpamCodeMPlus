@@ -10,6 +10,8 @@ class CloneAppRecipe(ConanFile):
         self.requires("asio/1.28.0")
         self.requires("argparse/2.9")
         self.requires("protobuf/3.21.9")
+        self.requires("boost/1.82.0")
+        self.requires("cryptopp/8.7.0")
 
     def build_requirements(self):
         self.tool_requires("cmake/3.22.6")

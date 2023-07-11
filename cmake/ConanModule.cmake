@@ -16,8 +16,10 @@ include(${CMAKE_BINARY_DIR}/conan.cmake)
 # Uses conan.cmake functionality to list the needed packages.
 conan_cmake_configure(REQUIRES
   argparse/2.9
-  catch2/3.3.2
   asio/1.28.0
+  boost/1.82.0
+  catch2/3.3.2
+  cryptopp/8.7.0
   protobuf/3.21.9
   GENERATORS cmake_find_package_multi)
 
@@ -38,4 +40,6 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
 find_package(argparse REQUIRED)
 find_package(Catch2 REQUIRED)
 find_package(asio REQUIRED)
+find_package(Boost 1.82.0 REQUIRED)
+find_package(cryptopp REQUIRED)
 find_package(protobuf CONFIG REQUIRED PATHS ${protobuf_DIR})
