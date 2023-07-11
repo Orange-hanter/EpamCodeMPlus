@@ -1,7 +1,3 @@
-//
-// Created by daniil on 6/2/23.
-//
-
 #include "Downloader.hpp"
 
 #include <asio/streambuf.hpp>
@@ -19,6 +15,7 @@ namespace logging = boost::log;
 void Downloader::doReadNewRequest()
 {
     auto self = (shared_from_this());
+
     doRead([self]() {
         self->m_candidate = Utils::packageToMessage<Filetransfer::FileTransferRequest_t, decltype(self->m_data)>(self->m_data);
         if (self->m_candidate)
@@ -26,35 +23,19 @@ void Downloader::doReadNewRequest()
             BOOST_LOG_TRIVIAL(info) << "New candidate " << self->m_candidate->file_name() << ' ' << self->m_candidate->file_size_kb();
             BOOST_LOG_TRIVIAL(info) << "Downloading file...";
 
-        if (request)
-            self->requestValidation(request.get());
+            self->sendResponse(Filetransfer::OK, "OK");
+            self->m_context.post(std::bind(&Downloader::doDownload, self));
+        }
         else
         {
             BOOST_LOG_TRIVIAL(error) << "ERROR: File wasn't received correctly";
             return;  // ToDo close connection??
         }
     });
-
-}
-
-void Downloader::requestValidation(const Filetransfer::FileTransferRequest_t* request)
-{
-    auto name              = request->file_name();
-    fs::path tmp_file_path = m_defaultFilePath.append(name);  // TODO check if file already exist
-    /*TODO:
-     * 1. make new promise from request data
-     * 2. send request for
-     * */
-
-    Filetransfer::FileTransferResponse_t response;
-    response.set_return_code(Filetransfer::ReturnCode::OK);
-
-    doWrite(&response, &Downloader::doDownload);
 }
 
 void Downloader::doDownload()
 {
-    std::map<int, std::string> memory{};
     auto self = shared_from_this();
 
     doRead([self]() {
@@ -98,104 +79,84 @@ void Downloader::assembleFile()
     else
         BOOST_LOG_TRIVIAL(error) << "Received file hash: " << hash << " not equal " << m_candidate->md5_hash();
 
-void Downloader::doWrite(const google::protobuf::MessageLite* request, void (Downloader::*handler)())
+    self->m_context.post(std::bind(&Downloader::doReadNewRequest, self));  // TODO move at true section previous if
+}
+
+template <typename Handler_t, typename... Args>
+void Downloader::doWrite(const google::protobuf::MessageLite* request, Handler_t handler, Args... args)
 {
-    auto buf = Utils::MessageToVector(*request);
-    asio::async_write(m_socket, asio::buffer(*buf, buf->size()), [this, handler](std::error_code ec, std::size_t) {
-        if (!ec) (this->*handler)();
+    auto buf = Utils::messageToPackage(*request);
+    asio::async_write(m_socket, asio::buffer(*buf, buf->size()), [this, handler, args...](std::error_code ec, std::size_t) {
+        if (ec) BOOST_LOG_TRIVIAL(error) << "Writing problem: " << asio::system_error(ec).what();
+        if (!ec) (this->*handler)(args...);
     });
 }
 
 void Downloader::doWrite(const google::protobuf::MessageLite* request)
 {
-    auto buf = Utils::MessageToVector(*request);
+    auto buf = Utils::messageToPackage(*request);
     asio::async_write(m_socket, asio::buffer(*buf, buf->size()), [](std::error_code ec, std::size_t) {
-        if (ec) std::cerr << std::source_location::current().line() << ": " << ec;
+        if (ec) BOOST_LOG_TRIVIAL(error) << "Writing problem: " << asio::system_error(ec).what();
+    });
+}
+
+void Downloader::doWrite(std::shared_ptr<google::protobuf::MessageLite>&& request)
+{
+    auto buf = Utils::messageToPackage(*request);
+    asio::async_write(m_socket, asio::buffer(*buf, buf->size()), [](std::error_code ec, std::size_t) {
+        if (ec) BOOST_LOG_TRIVIAL(error) << "Writing problem: " << asio::system_error(ec).what();
     });
 }
 
 template <typename Handler_t>
 void Downloader::doRead(Handler_t handler)
 {
-    auto self = (shared_from_this());
+    auto self = shared_from_this();
+    BOOST_LOG_TRIVIAL(info) << "Wait response...";
     asio::async_read(
-        self->socket(), asio::buffer(m_data),
+        self->m_socket, asio::buffer(m_data),
         [self](const std::error_code& ec, std::size_t received) {
-            auto header_size{sizeof(std::uint32_t) + sizeof(std::uint64_t)};
-
-            if (received < header_size) return header_size;
-
-            std::uint32_t start{*reinterpret_cast<std::uint32_t*>(self->m_data.data())};
-            if (start == Utils::start_dword)
+            if (ec)
             {
-                auto message_size   = *reinterpret_cast<std::uint64_t*>(self->m_data.data() + sizeof(std::uint32_t));
-                auto estimated_size = header_size + message_size + sizeof(Utils::end_dword);
-                std::uint32_t end{*reinterpret_cast<std::uint32_t*>(self->m_data.data() + estimated_size - sizeof(Utils::end_dword))};
-                if (end == Utils::end_dword) return 0UL;
-
-                return estimated_size;
+                if (ec == asio::error::eof)
+                {
+                    self->m_dlManager.stopSession(self);
+                    return 0UL;
+                }
+                BOOST_LOG_TRIVIAL(error) << "Reading problem: " << asio::system_error(ec).what();
             }
 
-            return 0UL;
+            return Utils::receiverAlgorithm(self->m_data.begin(), received);
         },
         [self, handler](std::error_code ec, std::size_t length) {
             if (!ec)
                 handler();
-            else if (ec == asio::error::eof)
-            {
-                ;  // end of connection
-            }
+            else
+                BOOST_LOG_TRIVIAL(error) << "Reading problem: " << asio::system_error(ec).what();
         });
-}
-
-template <typename Handler_t>
-void Downloader::doReadS(Handler_t handler)
-{
-    auto self = (shared_from_this());
-    std::error_code ec{};
-    asio::read(
-        self->socket(), asio::buffer(m_data),
-        [self](const std::error_code& ec, std::size_t received) {
-            auto header_size{sizeof(std::uint32_t) + sizeof(std::uint64_t)};
-
-            if (received < header_size) return header_size;
-
-            std::uint32_t start{*reinterpret_cast<std::uint32_t*>(self->m_data.data())};
-            if (start == Utils::start_dword)
-            {
-                auto message_size   = *reinterpret_cast<std::uint64_t*>(self->m_data.data() + sizeof(std::uint32_t));
-                auto estimated_size = message_size + sizeof(Utils::end_dword);
-                auto end_ptr_shift = header_size + message_size;
-                std::uint32_t end{*reinterpret_cast<std::uint32_t*>(self->m_data.data() + end_ptr_shift)};
-                if (end == Utils::end_dword) return 0UL;
-
-                return estimated_size;
-            }
-            std::cout << "Error reading\n" << self->m_data.data() << std::endl;
-            return 0UL;
-        },
-        ec);
-
-    if (!ec)
-        handler();
-    else if (ec == asio::error::eof)
-    {
-        ;  // end of connection
-    }
 }
 
 Downloader::Downloader(asio::io_context& ctx, tcp::socket& socket, DLManager& mngr, fs::path dfPath)
     : m_context(ctx), m_socket(std::move(socket)), m_dlManager(mngr), m_defaultFilePath(std::move(dfPath))
 {
-    std::cout << "Connection created" << &(*this) << '\n';
+    BOOST_LOG_TRIVIAL(info) << "Connection created. Object: " << &(*this);
 }
 
-Downloader::~Downloader() { std::cout << "Connection closed" << &(*this) << '\n'; }
+Downloader::~Downloader() { BOOST_LOG_TRIVIAL(info) << "Connection closed. Object: " << &(*this); }
 
 void Downloader::start()
 {
     m_dlManager.registerSession(shared_from_this());
     doReadNewRequest();
+}
+
+void Downloader::sendResponse(Filetransfer::ReturnCode code, std::string message)
+{
+    BOOST_LOG_TRIVIAL(info) << "Send response: " << code << " " << message;
+    auto ok = std::make_shared<Filetransfer::FileTransferResponse_t>();
+    ok->set_return_code(code);
+    ok->set_error_message(message);
+    this->doWrite(ok);
 }
 
 }  // namespace Clone::TransportLayer

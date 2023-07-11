@@ -42,7 +42,7 @@ void Uploader::doConnect()
         }
     });
     std::thread([this]() {
-        // TODO not sure that this is good idea
+        // TODO add signal processing
         asio::signal_set signals(m_context, SIGINT, SIGTERM);
         signals.async_wait([&](auto, auto) {
             BOOST_LOG_TRIVIAL(info) << "Termination session after external signal";
@@ -120,11 +120,11 @@ void Uploader::doTransferFile()
     while (!ifs.eof())
     {
         auto chunk = std::make_shared<Filetransfer::FileChunk_t>();
-        auto reservSize {Utils::streamSize(ifs)};
-        reservSize = (reservSize > m_chunkSize) ? m_chunkSize : reservSize;
-        std::vector<char> buf(reservSize);
+        std::vector<char> buf(m_chunkSize);
+        ifs.read(buf.data(), m_chunkSize);
 
-        ifs.read(buf.data(), buf.size());
+        chunk->set_data(buf.data(), ifs.gcount());  // TODO potential error
+        chunk->set_sequence_num(static_cast<int32_t>(chunk_N++));
 
         BOOST_LOG_TRIVIAL(info) << "Send package " << chunk->sequence_num() << " " << chunk->data().size() << " byte";
 
@@ -140,7 +140,7 @@ void Uploader::doTransferFile()
 
 void Uploader::doWrite(const google::protobuf::MessageLite* request, void (Uploader::*handler)())
 {
-    auto buf = Utils::MessageToVector(*request); // TODO here potentially memory deleeting faster than
+    auto buf = Utils::messageToPackage(*request);
     asio::async_write(m_socket, asio::buffer(*buf, buf->size()), [this, handler, buf](std::error_code ec, std::size_t) {
         if (!ec)
         {
@@ -153,7 +153,7 @@ void Uploader::doWrite(const google::protobuf::MessageLite* request, void (Uploa
 
 void Uploader::doWrite(const google::protobuf::MessageLite* request)
 {
-    auto buf = Utils::MessageToVector(*request);
+    auto buf = Utils::messageToPackage(*request);
     asio::async_write(m_socket, asio::buffer(*buf, buf->size()), [buf](std::error_code ec, std::size_t) {
         if (ec) BOOST_LOG_TRIVIAL(error) << "Writing problem: " << asio::system_error(ec).what();
     });
@@ -166,12 +166,7 @@ void Uploader::doRead(Handler_t handler)
     asio::async_read(
         self->m_socket, asio::buffer(m_data),
         [self](const std::error_code& ec, std::size_t received) {
-            auto header_size{sizeof(std::uint32_t) + sizeof(std::uint64_t)};
-
-            if (received < header_size) return header_size;
-
-            std::uint32_t start{*reinterpret_cast<std::uint32_t*>(self->m_data.data())};
-            if (start == Utils::start_dword)
+            if (ec)
             {
                 if (ec == asio::error::eof)
                 {
