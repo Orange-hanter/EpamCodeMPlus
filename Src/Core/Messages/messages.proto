@@ -7,6 +7,7 @@ enum ReturnCode {
   OK = 200;
   RECEIVED = 210;
   ERROR = 400;
+  SYNC = 500;
 }
 
 message Message_size_t {

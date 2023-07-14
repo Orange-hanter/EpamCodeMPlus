@@ -86,5 +86,12 @@ inline std::size_t receiverAlgorithm(T* data_ptr, std::size_t received)
     return 0UL;  // TODO somehow we need indicate about error
 }
 
+template <typename T>
+inline auto getFlags(T* data_ptr)
+{
+    auto value = *reinterpret_cast<std::uint32_t*>(data_ptr + sizeof(std::uint32_t) * 2);
+    return value;
+}
+
 };      // namespace Clone::Utils
 #endif  // EPAMMIDDLE_MESSAGEUTILS_HPP
