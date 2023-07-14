@@ -59,7 +59,7 @@ private:
     asio::io_context& m_context;
     tcp::socket m_socket;
     DLManager& m_dlManager;
-    std::array<char, 1024> m_data{};
+    std::array<char, 4096> m_data{};
     fs::path m_defaultFilePath;
     std::unique_ptr<Filetransfer::FileTransferRequest_t> m_candidate;
     std::map<int, std::string> memory{};

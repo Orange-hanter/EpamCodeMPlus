@@ -97,7 +97,8 @@ void Uploader::doReadResponse()
                 return;
 
             default:
-                BOOST_LOG_TRIVIAL(error) << "Response are not defined";
+                BOOST_LOG_TRIVIAL(error) << "Response are not defined. Code:" << rc->return_code() << " msg:" << rc->error_message();
+                self->m_context.post(std::bind(&Uploader::doReadResponse, self));
         }
     });
 }
@@ -129,18 +130,39 @@ void Uploader::doTransferFile()
         BOOST_LOG_TRIVIAL(trace) << "Send package " << chunk->sequence_num() << " " << chunk->data().size() << " byte";
 
         doWrite(chunk.get());  // TODO potential memory leak! (by the way, not. But better to check with Valgrind
+        if (chunk_N % 1000 == 0)  // sync
+        {
+            BOOST_LOG_TRIVIAL(trace) << "Sync at " << chunk_N;
+            asio::read(self->m_socket, asio::buffer(m_data), [self](const std::error_code& ec, std::size_t received) {
+                if (ec)
+                {
+                    if (ec == asio::error::eof)
+                    {
+                        self->doCloseSession();
+                        return 0UL;
+                    }
+                    BOOST_LOG_TRIVIAL(error) << "Reading problem: " << asio::system_error(ec).what();
+                }
+                return Utils::receiverAlgorithm(self->m_data.begin(), received);
+            });
+            auto sync_package = Utils::packageToMessage<Filetransfer::FileTransferResponse_t, decltype(self->m_data)>(self->m_data);
+            if (!sync_package) throw std::logic_error("Damaged package was received");
+
+            if (sync_package->return_code() != Filetransfer::SYNC) throw std::logic_error("Sync violation!");
+        }
     }
 
     BOOST_LOG_TRIVIAL(info) << "Send EOF flag. Chunks sent " << chunk_N;
     auto chunk = std::make_shared<Filetransfer::FileChunk_t>();
     chunk->set_sequence_num(-1);
-    doWrite(chunk.get());
+    chunk->set_data("");
+    doWrite(chunk.get(), 1);  // TODO remove 1 and replace by enum. In this case 1 indicate EOF
     self->m_context.dispatch(std::bind(&Uploader::doReadResponse, self));
 }
 
-void Uploader::doWrite(const google::protobuf::MessageLite* request, void (Uploader::*handler)())
+void Uploader::doWrite(const google::protobuf::MessageLite* request, void (Uploader::*handler)(), std::uint32_t flags)
 {
-    auto buf = Utils::messageToPackage(*request);
+    auto buf = Utils::messageToPackage(*request, flags);
     asio::async_write(m_socket, asio::buffer(*buf, buf->size()), [this, handler, buf](std::error_code ec, std::size_t) {
         if (!ec)
         {
@@ -151,9 +173,9 @@ void Uploader::doWrite(const google::protobuf::MessageLite* request, void (Uploa
     });
 }
 
-void Uploader::doWrite(const google::protobuf::MessageLite* request)
+void Uploader::doWrite(const google::protobuf::MessageLite* request, std::uint32_t flags)
 {
-    auto buf = Utils::messageToPackage(*request);
+    auto buf = Utils::messageToPackage(*request, flags);
     asio::async_write(m_socket, asio::buffer(*buf, buf->size()), [buf](std::error_code ec, std::size_t) {
         if (ec) BOOST_LOG_TRIVIAL(error) << "Writing problem: " << asio::system_error(ec).what();
     });

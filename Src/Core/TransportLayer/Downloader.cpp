@@ -37,6 +37,7 @@ void Downloader::doReadNewRequest()
 void Downloader::doDownload()
 {
     auto self = shared_from_this();
+    static std::size_t package{0};
 
     doRead([self]() {
         BOOST_LOG_TRIVIAL(trace) << "Package processing";
@@ -52,10 +53,27 @@ void Downloader::doDownload()
             self->m_context.post(std::bind(&Downloader::assembleFile, self));
             return;
         }
+        if (frame_id % 1000 == 0)   // TODO made this value dinamic and dependent on system buffer size
+        {
+            BOOST_LOG_TRIVIAL(trace) << "Sync at " << frame_id;
+            self->sendResponse(Filetransfer::SYNC, "SYNC");
+        }
         self->memory.emplace(frame_id, request->data());
 
-        BOOST_LOG_TRIVIAL(trace) << "Got frame: " << frame_id << " " << request->data().size() << " byte";
-        self->m_context.dispatch(std::bind(&Downloader::doDownload, self));
+        BOOST_LOG_TRIVIAL(trace) << "Got frame: " << frame_id << " " << request->data().size() << " byte. Package "<< package <<" granted.";
+        package++;
+
+        if(auto x = Utils::getFlags(self->m_data.data()) == 1)
+        {
+            BOOST_LOG_TRIVIAL(info) << "Package EOF granted";
+            BOOST_LOG_TRIVIAL(info) << "Package "<< package <<" granted.";
+
+            self->sendResponse(Filetransfer::RECEIVED, "RE");
+            //self->m_context.post(std::bind(&Downloader::assembleFile, self));
+            self->m_context.post(std::bind(&Downloader::doReadNewRequest, self));  // TODO move at true section previous if
+            return;
+        }
+        self->m_context.post(std::bind(&Downloader::doDownload, self));
     });
 }
 

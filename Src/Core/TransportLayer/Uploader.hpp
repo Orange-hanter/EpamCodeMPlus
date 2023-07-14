@@ -30,8 +30,8 @@ class Uploader : public std::enable_shared_from_this<Uploader>
     void doReadResponse();
     void doTransferFile();
 
-    void doWrite(const google::protobuf::MessageLite* request, void (Uploader::*handler)());
-    void doWrite(const google::protobuf::MessageLite* request);
+    void doWrite(const google::protobuf::MessageLite* request, void (Uploader::*handler)(), std::uint32_t flags = 0);
+    void doWrite(const google::protobuf::MessageLite* request, std::uint32_t flags = 0);
 
     template <typename Handler_t>
     void doRead(Handler_t handler);
