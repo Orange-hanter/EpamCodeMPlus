@@ -104,7 +104,7 @@ void Uploader::doReadResponse()
 
 void Uploader::doTransferFile()
 {
-    BOOST_LOG_TRIVIAL(trace) << "Star transferring";
+    BOOST_LOG_TRIVIAL(info) << "Star transferring";
 
     auto self = shared_from_this();
 
@@ -126,12 +126,12 @@ void Uploader::doTransferFile()
         chunk->set_data(buf.data(), ifs.gcount());  // TODO potential error
         chunk->set_sequence_num(static_cast<int32_t>(chunk_N++));
 
-        BOOST_LOG_TRIVIAL(info) << "Send package " << chunk->sequence_num() << " " << chunk->data().size() << " byte";
+        BOOST_LOG_TRIVIAL(trace) << "Send package " << chunk->sequence_num() << " " << chunk->data().size() << " byte";
 
         doWrite(chunk.get());  // TODO potential memory leak! (by the way, not. But better to check with Valgrind
     }
 
-    BOOST_LOG_TRIVIAL(trace) << "Send EOF flag";
+    BOOST_LOG_TRIVIAL(info) << "Send EOF flag. Chunks sent " << chunk_N;
     auto chunk = std::make_shared<Filetransfer::FileChunk_t>();
     chunk->set_sequence_num(-1);
     doWrite(chunk.get());

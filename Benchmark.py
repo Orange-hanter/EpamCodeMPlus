@@ -54,7 +54,9 @@ def ipc_way(path, copy_path):
 
 @statistic(net_stat)
 def net_way(path, copy_path):
-    os.system(app_path + f" --client --source {path} --mode NET --destination 127.0.0.1")
+    cmd = app_path + f" --client --source {path} --mode NET --destination 127.0.0.1"
+    #os.system(f"{cmd} & {cmd} & {cmd} & {cmd} ")
+    os.system(f"{cmd}")
 
 
 if __name__ == "__main__":
@@ -62,13 +64,19 @@ if __name__ == "__main__":
     generate_file(MB)
     net_test = Popen([app_path, "--source", copy_path, "--mode", "NET"])
 
-    for _ in range(2):
-        multithread_way(filename, copy_path)
-        # ipc_way(filename, copy_path)
-        net_way(filename, copy_path)
+    examinations = 2
+    executable = list()
+    executable.append(net_way)
+    #executable.append(ipc_way)
+    executable.append(multithread_way)
+
+    for function in executable:
+        for _ in range(examinations):
+            function(filename, copy_path)
     net_test.kill()
 
-    for cp_type, rate in [("Network", net_stat), ("Multithread", multithread_stat)]:
+    for cp_type, rate in [("Network", net_stat), ("Multithread", multithread_stat), ("Shared memory", ipc_stat)]:
         # TODO make sure the measure value is correct
-        print(f"Average {cp_type} rate: {MB / mean(rate) :.3f} MB/s")
+        rate = MB / mean(rate)
+        print(f"Average {cp_type} rate: {rate if rate < 1000 else 0 :.3f} MB/s")
     os.remove(filename)

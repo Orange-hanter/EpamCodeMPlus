@@ -112,7 +112,7 @@ template <typename Handler_t>
 void Downloader::doRead(Handler_t handler)
 {
     auto self = shared_from_this();
-    BOOST_LOG_TRIVIAL(info) << "Wait response...";
+    BOOST_LOG_TRIVIAL(trace) << "Wait response...";
     asio::async_read(
         self->m_socket, asio::buffer(m_data),
         [self](const std::error_code& ec, std::size_t received) {
@@ -125,7 +125,6 @@ void Downloader::doRead(Handler_t handler)
                 }
                 BOOST_LOG_TRIVIAL(error) << "Reading problem: " << asio::system_error(ec).what();
             }
-
             return Utils::receiverAlgorithm(self->m_data.begin(), received);
         },
         [self, handler](std::error_code ec, std::size_t length) {
@@ -152,7 +151,7 @@ void Downloader::start()
 
 void Downloader::sendResponse(Filetransfer::ReturnCode code, std::string message)
 {
-    BOOST_LOG_TRIVIAL(info) << "Send response: " << code << " " << message;
+    BOOST_LOG_TRIVIAL(trace) << "Send response: " << code << " " << message;
     auto ok = std::make_shared<Filetransfer::FileTransferResponse_t>();
     ok->set_return_code(code);
     ok->set_error_message(message);
