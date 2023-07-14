@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package Filetransfer;
+
+enum ReturnCode {
+  DEFAULT = 0;
+  OK = 200;
+  RECEIVED = 210;
+  ERROR = 400;
+  SYNC = 500;
+}
+
+message Message_size_t {
+  fixed32 m_size = 1;
+}
+
+message FileTransferRequest_t {
+  string file_name = 1;
+  string md5_hash = 2;
+  uint64 file_size_kb = 3;
+}
+
+message FileChunk_t {
+  int32 sequence_num = 1;
+  bytes data = 2;
+}
+
+message FileTransferResponse_t {
+  ReturnCode return_code = 1;
+  string error_message = 2;
+}

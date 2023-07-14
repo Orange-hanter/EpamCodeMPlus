@@ -1,6 +1,33 @@
----
 BasedOnStyle: Google
-AllowShortEnumsOnASingleLine: false
-AlignConsecutiveDeclarations: false
-TabWidth: 5
-BreakBeforeBraces: Stroustrup
+IndentWidth: 4
+---
+Language: Cpp
+# Force pointers to the type for C++.
+DerivePointerAlignment: false
+PointerAlignment: Left
+ColumnLimit: 140
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: AcrossEmptyLines
+AlignConsecutiveDeclarations:
+  AcrossEmptyLines: false
+  AcrossComments: false
+  AlignCompound: false
+  Enabled: false
+  PadOperators: false
+AlignOperands: Align
+AllowShortBlocksOnASingleLine: Never
+AlwaysBreakTemplateDeclarations: Yes
+AccessModifierOffset: -4
+BreakBeforeBraces: Custom
+BraceWrapping:
+  BeforeElse: true
+  AfterControlStatement: Always
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterEnum: true
+  AfterExternBlock: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
