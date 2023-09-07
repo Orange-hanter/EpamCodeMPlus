@@ -34,7 +34,7 @@ IWorker* WorkerFactory::getWorker()
     auto cc      = _config->get_param(Property::role);
 
     // logging::add_file_log(cc + "sample.log");
-    logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::trace);
+    logging::core::get()->set_filter(logging::trivial::severity >= logging::trivial::info);
 
     return cc == "HOST" ? factory->CreateWriter() : factory->CreateReader();
 }
