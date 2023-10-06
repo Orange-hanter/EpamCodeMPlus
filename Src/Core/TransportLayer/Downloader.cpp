@@ -65,11 +65,9 @@ void Downloader::doDownload()
 
         if(auto x = Utils::getFlags(self->m_data.data()) == 1)
         {
-            BOOST_LOG_TRIVIAL(info) << "Package EOF granted";
-            BOOST_LOG_TRIVIAL(info) << "Package "<< package <<" granted.";
+            BOOST_LOG_TRIVIAL(info) << "Package EOF granted" << "\nPackages "<< package <<" granted.";
 
             self->sendResponse(Filetransfer::RECEIVED, "RE");
-            //self->m_context.post(std::bind(&Downloader::assembleFile, self));
             self->m_context.post(std::bind(&Downloader::doReadNewRequest, self));  // TODO move at true section previous if
             return;
         }
@@ -77,6 +75,7 @@ void Downloader::doDownload()
     });
 }
 
+//TODO: file should assemble in parallel of downloading. Now I spend a memory two times, for storing frames and for assembling
 void Downloader::assembleFile()
 {
     auto self              = shared_from_this();
@@ -92,7 +91,7 @@ void Downloader::assembleFile()
     auto hash = Utils::calculateHash(tmp_file_path);
     if (hash == m_candidate->md5_hash())  // todo when uploader send file, at the end it add extra zeros, because of that hash didn't match
     {
-        BOOST_LOG_TRIVIAL(info) << "Received file hash: " << hash << " ==" << m_candidate->md5_hash();
+        BOOST_LOG_TRIVIAL(info) << "Received file hash: " << hash << " == " << m_candidate->md5_hash() << " OKAY";
     }
     else
         BOOST_LOG_TRIVIAL(error) << "Received file hash: " << hash << " not equal " << m_candidate->md5_hash();

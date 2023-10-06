@@ -16,7 +16,7 @@ add_executable(${TARGET} ${SOURCE_FILES})
 #set_target_properties(${TARGET} PROPERTIES FOLDER ${FOLDER})
 
 target_link_libraries(${TARGET} PUBLIC Catch2::Catch2WithMain)
-#target_link_libraries(Clone.Benchmark PRIVATE Clone.Core)
+target_link_libraries(${TARGET} PRIVATE Clone.Core)
 
 #include(CTest)
 #include(Catch)
