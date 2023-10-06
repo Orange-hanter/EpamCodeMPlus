@@ -34,6 +34,8 @@ set(LIB_HEADER_FILES
         Factories/BytestreamWorkerFactory.hpp
         TransportLayer/Uploader.cpp
         TransportLayer/Uploader.hpp
+        TransportLayer/Criptography.cpp
+        TransportLayer/Criptography.hpp
 )
 
 set(SOURCE_FILES ${LIB_SOURCE_FILES} ${LIB_HEADER_FILES} )
@@ -48,4 +50,4 @@ target_include_directories(${TARGET} PUBLIC ./Common
                                             ./
 )
 
-target_link_libraries(${TARGET} PUBLIC asio::asio proto-objects Boost::log_setup Boost::log)
+target_link_libraries(${TARGET} PUBLIC asio::asio proto-objects Boost::log_setup Boost::log cryptopp::cryptopp)

@@ -1,5 +1,3 @@
-#pragma once
-
 #include <asio.hpp>
 #include <list>
 #include <utility>

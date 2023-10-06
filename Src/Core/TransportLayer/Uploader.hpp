@@ -56,7 +56,7 @@ private:
     } m_connectionState{ConnectionState::CLOSED};
 
     static constexpr std::size_t m_chunkSize{512};
-    std::array<char, m_chunkSize * 2> m_data{};
+    std::array<std::byte, m_chunkSize * 2> m_data{};
     fs::path m_FilePath;
 };
 }  // namespace Clone::TransportLayer

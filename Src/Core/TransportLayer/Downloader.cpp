@@ -75,6 +75,7 @@ void Downloader::doDownload()
     });
 }
 
+//TODO: file should assemble in parallel of downloading. Now I spend a memory two times, for storing frames and for assembling
 void Downloader::assembleFile()
 {
     auto self              = shared_from_this();

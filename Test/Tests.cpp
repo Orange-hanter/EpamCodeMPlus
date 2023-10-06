@@ -1,15 +1,30 @@
 #include <catch2/catch_all.hpp>
 
-//#include "Direcror.hpp"
+#include "Criptography.hpp"
 
-TEST_CASE("Factorial of 0 is 1 (fail)", "[single-file]")
+using Copy::Security::Cryptography;
+using Copy::Security::NO_ENCRYPT_MODE;
+using Copy::Security::AES_MODE;
+
+TEST_CASE("AES encryption and description")
 {
-  // Clone::Director director(conf.getParam<std::string>("--source"),
-  //                          conf.getParam<std::string>("--destination"));
-  REQUIRE(0 == 1);
+    Copy::Security::Cryptography<AES_MODE> obj;
+        std::string plain_text{"Raw text"};
+
+        SECTION("Encryption test")
+        {
+            REQUIRE( obj.encrypt(plain_text) != plain_text );
+        }
 }
 
-TEST_CASE("Factorials of 1 and higher are computed (pass)", "[single-file]")
+TEST_CASE("No encryption and description")
 {
-  REQUIRE(1 == 1);
+        Cryptography<NO_ENCRYPT_MODE> obj;
+        std::string plain_text{"Raw text"};
+
+        SECTION("Dummmy test")
+        {
+            REQUIRE( obj.encrypt(plain_text) == plain_text );
+            REQUIRE( obj.decrypt(plain_text) == plain_text );
+        }
 }
